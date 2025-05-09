@@ -1,32 +1,24 @@
 import SDL2
 import MonoUI
 
-
-class App {
+class SDLRenderBackend: RenderBackend {
     struct WindowConfig {
         static let Width = 128
         static let Height = 64
         static let Multiple = 3
     }
-
-    var screen: UnsafeMutablePointer<SDL_Surface>!
-    var window: OpaquePointer!
-
-    lazy var blackColor: UInt32 = {
-        return SDL_MapRGB(screen.pointee.format, 0, 0, 0)
-    }()
-
-    lazy var whiteColor: UInt32 = {
-        return SDL_MapRGB(screen.pointee.format, 255, 255, 255)
-    }()
-
-    private func setupSDL() {
+    
+    private var screen: UnsafeMutablePointer<SDL_Surface>!
+    private var window: OpaquePointer!
+    private let blackColor: UInt32
+    private let whiteColor: UInt32
+    
+    init() {
         guard SDL_Init(UInt32(SDL_INIT_VIDEO)) == 0 else {
             print("无法初始化SDL: \(String(cString: SDL_GetError()))")
             exit(1)
         }
         
-        // 创建窗口
         window = SDL_CreateWindow(
             "MonoUI SDL Simulator",
             Int32(0),
@@ -41,7 +33,6 @@ class App {
             exit(1)
         }
         
-        // 获取窗口表面
         screen = SDL_GetWindowSurface(window)
         
         guard let _ = screen else {
@@ -49,19 +40,33 @@ class App {
             exit(1)
         }
 
-        // 更新窗口表面
         SDL_UpdateWindowSurface(window)
         
-        // 注册退出处理
         atexit {
             SDL_Quit()
         }
+        
+        self.blackColor = SDL_MapRGB(screen.pointee.format, 0, 0, 0)
+        self.whiteColor = SDL_MapRGB(screen.pointee.format, 255, 255, 255)
     }
-
-    func setup() {
-        setupSDL()
+    
+    func update(buffer: [UInt8], width: Int, height: Int) {
+        let pitch = screen.pointee.pitch
+        let pixels = screen.pointee.pixels
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let bufferIndex = y * width + x
+                let pixelIndex = y * Int(pitch) + x * 4
+                
+                let color = buffer[bufferIndex] == 0 ? blackColor : whiteColor
+                pixels?.advanced(by: pixelIndex).assumingMemoryBound(to: UInt32.self).pointee = color
+            }
+        }
+        
+        SDL_UpdateWindowSurface(window)
     }
-
+    
     func handleEvents() {
         var event = SDL_Event()
         while SDL_PollEvent(&event) != 0 {
@@ -69,36 +74,86 @@ class App {
             case SDL_QUIT.rawValue:
                 SDL_Quit()
                 exit(0)
-                
-            case SDL_MOUSEBUTTONDOWN.rawValue:
-                break
-                
             default:
                 break
             }
         }
     }
+    
+    func delay() {
+        SDL_Delay(16) // 约60FPS
+    }
+}
+
+class App {
+    var renderBackend: SDLRenderBackend!
+    var uiScreen: MonoUI.Screen!
+    
+    func setup() {
+        renderBackend = SDLRenderBackend()
+        uiScreen = MonoUI.Screen(width: SDLRenderBackend.WindowConfig.Width, 
+                               height: SDLRenderBackend.WindowConfig.Height, 
+                               backend: renderBackend)
+        
+        // 创建多边形
+        let polygonPath = Path()
+        polygonPath.move(to: Point(x: 64, y: 10))  // 顶点
+        polygonPath.addLine(to: Point(x: 20, y: 54))  // 左下角
+        polygonPath.addLine(to: Point(x: 108, y: 54)) // 右下角
+        polygonPath.addLine(to: Point(x: 43, y: 45))  // 顶点
+        polygonPath.close()
+        
+        // 创建多边形图层
+        let polygonLayer = ShapeLayer(path: polygonPath)
+        polygonLayer.setFillColor(.none)
+        polygonLayer.setStrokeColor(.white)
+        
+        // 创建一个圆弧路径
+        let arcPath = Path()
+        arcPath.addArc(center: Point(x: 100, y: 32),
+                      radius: 20,
+                      startAngle: 0,
+                      endAngle: .pi / 2,
+                      clockwise: false)
+        
+        // 创建圆弧图层
+        let arcLayer = ShapeLayer(path: arcPath)
+        arcLayer.setFillColor(.none)
+        arcLayer.setStrokeColor(.white)
+        arcLayer.setLineWidth(5)
+        
+        // 创建一个圆角矩形路径
+        let roundedRectPath = Path()
+        roundedRectPath.addRoundedRect(
+            Rect(origin: Point(x: 15, y: 5), size: Size(width: 50, height: 50)),
+            cornerRadius: 10)
+        
+        // 创建圆角矩形图层
+        let roundedRectLayer = ShapeLayer(path: roundedRectPath)
+        roundedRectLayer.setFillColor(.white)
+        roundedRectLayer.setStrokeColor(.white)
+        
+        // 添加所有图层到表面
+        uiScreen.surface.addLayer(polygonLayer)
+        uiScreen.surface.addLayer(arcLayer)
+        uiScreen.surface.addLayer(roundedRectLayer)
+        
+        // 渲染所有图层
+        uiScreen.surface.render()
+    }
 
     func update() {
-        // 用SDL 在 screen 中心绘制一个矩形
-        var rect = SDL_Rect(x: 0, y: 0, w: 128, h: 64)
-        let color = whiteColor
-        SDL_FillRect(screen, &rect, color)
-
+        renderBackend.handleEvents()
     }
 
     func render() {
-        // 更新显示
-        SDL_UpdateWindowSurface(window)
-        
-        // 控制帧率
-        SDL_Delay(16) // 约60FPS
+        uiScreen.update()
+        renderBackend.delay()
     }
 
     func run() {
         setup()
         while true {
-            handleEvents()
             update()
             render()
         }
