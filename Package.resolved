@@ -1,0 +1,15 @@
+{
+  "originHash" : "6fd9915239fc8b03efab0b20f219bcced5625a8ed22dba23e6d2171930129c06",
+  "pins" : [
+    {
+      "identity" : "swiftsdl2",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CmST0us/SwiftSDL2.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "a4ae230dc0ab5b28e3169f0306071f76a808055d"
+      }
+    }
+  ],
+  "version" : 3
+}
