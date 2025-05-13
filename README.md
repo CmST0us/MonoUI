@@ -28,7 +28,7 @@ Add MonoUI to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/MonoUI.git", branch: "main")
+    .package(url: "https://github.com/CmST0us/MonoUI.git", branch: "main")
 ]
 ```
 
