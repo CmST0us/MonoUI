@@ -1,5 +1,5 @@
 {
-  "originHash" : "6fd9915239fc8b03efab0b20f219bcced5625a8ed22dba23e6d2171930129c06",
+  "originHash" : "5500ce076ba7fdd9b4a22c3f217b3d14a224f11a3f1f66863ec264c06f3b8034",
   "pins" : [
     {
       "identity" : "swiftsdl2",
@@ -8,6 +8,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "a4ae230dc0ab5b28e3169f0306071f76a808055d"
+      }
+    },
+    {
+      "identity" : "swiftstlinkv3bridge",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CmST0us/SwiftSTLinkV3Bridge.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "e8f976e8596721bdca55430348659232a9045f0a"
       }
     }
   ],

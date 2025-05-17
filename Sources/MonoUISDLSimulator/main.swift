@@ -5,7 +5,7 @@ class SDLRenderBackend: RenderBackend {
     struct WindowConfig {
         static let Width = 128
         static let Height = 64
-        static let Multiple = 3
+        static let Multiple = 1
     }
     
     private var screen: UnsafeMutablePointer<SDL_Surface>!
