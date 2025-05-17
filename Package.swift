@@ -4,9 +4,7 @@
 import PackageDescription
 import Foundation
 
-var SwiftSTLinkV3BridgePath = {
-    URL(fileURLWithPath: ".").appendingPathComponent(".build/checkouts/SwiftSTLinkV3Bridge")
-}()
+let SwiftSTLinkV3BridgePath = URL(fileURLWithPath: ".").appendingPathComponent(".build/checkouts/SwiftSTLinkV3Bridge")
 
 let package = Package(
     name: "MonoUI",
