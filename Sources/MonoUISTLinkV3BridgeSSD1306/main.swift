@@ -1,83 +1,51 @@
 import Foundation
 import SwiftSTLinkV3Bridge
 import MonoUI
+import CU8g2
 
-class STLinkSSD1306RenderBackend: RenderBackend {
-    private let device: SwiftSTLinkV3Bridge.Bridge
-    private let address: I2CAddress
-    private let width: Int = 128
-    private let height: Int = 64
-    private var buffer: [UInt8]
+// 绘制速度仪表盘
+func drawSpeedGauge(u8g2: UnsafeMutablePointer<u8g2_t>, speed: Int) {
+    let centerX: UInt16 = 32  // 向左移动
+    let centerY: UInt16 = 32
+    let radius: UInt16 = 25   // 稍微缩小一点
     
-    init(device: SwiftSTLinkV3Bridge.Bridge, address: I2CAddress) {
-        self.device = device
-        self.address = address
-        self.buffer = Array(repeating: 0, count: width * height)
-        
-        // 初始化 SSD1306
-        initializeSSD1306()
+    // 绘制外圈
+    u8g2_DrawCircle(u8g2, centerX, centerY, radius, 0xFF)
+    
+    // 绘制刻度
+    for i in 0..<12 {
+        let angle = Double(i) * 30.0 * .pi / 180.0
+        let x1 = Int16(centerX) + Int16(cos(angle) * Double(radius - 2))
+        let y1 = Int16(centerY) + Int16(sin(angle) * Double(radius - 2))
+        let x2 = Int16(centerX) + Int16(cos(angle) * Double(radius))
+        let y2 = Int16(centerY) + Int16(sin(angle) * Double(radius))
+        u8g2_DrawLine(u8g2, UInt16(x1), UInt16(y1), UInt16(x2), UInt16(y2))
     }
     
-    private func initializeSSD1306() {
-        // SSD1306 初始化命令序列
-        let commands: [UInt8] = [
-            0xAE,       // 关闭显示
-            0xD5, 0x80, // 设置显示时钟分频比/振荡器频率
-            0xA8, 0x3F, // 设置多路复用率
-            0xD3, 0x00, // 设置显示偏移
-            0x40,       // 设置显示起始行
-            0x8D, 0x14, // 启用充电泵
-            0x20, 0x02, // 设置内存寻址模式为页寻址
-            0xA1,       // 设置段重定向 0xA0/0xA1
-            0xC8,       // 设置COM扫描方向 0xC0/0xC8
-            0xDA, 0x12, // 设置COM硬件配置
-            0x81, 0xCF, // 设置对比度
-            0xD9, 0xF1, // 设置预充电周期
-            0xDB, 0x30, // 设置VCOMH取消选择级别
-            0xA4,       // 全局显示开启
-            0xA6,       // 设置正常显示
-            0xAF        // 开启显示
-        ]
-        
-        // 发送初始化命令
-        for command in commands {
-            device.writeI2C(addr: UInt16(address.address7Bit!), data: [0x00, command])
-        }
+    // 绘制数字
+    u8g2_SetFont(u8g2, u8g2_font_6x10_tr)
+    for i in 0..<4 {
+        let angle = Double(i) * 90.0 * .pi / 180.0
+        let x = Int16(centerX) + Int16(cos(angle) * Double(radius - 8))
+        let y = Int16(centerY) + Int16(sin(angle) * Double(radius - 8))
+        let speed = i * 25  // 改为 0, 25, 50, 75
+        u8g2_DrawStr(u8g2, UInt16(x - 5), UInt16(y - 3), "\(speed)")
     }
     
-    func update(buffer: [UInt8], width: Int, height: Int) {
-        // 将一维缓冲区转换为SSD1306的页面格式
-        var pageBuffer = [UInt8](repeating: 0, count: 1024) // 128 * 8 = 1024
-        
-        for y in 0..<8 { // 8页
-            for x in 0..<128 { // 128列
-                var byte: UInt8 = 0
-                for bit in 0..<8 { // 每页8位
-                    let pixelY = y * 8 + bit
-                    if pixelY < height {
-                        let index = pixelY * width + x
-                        if index < buffer.count && buffer[index] == 1 {
-                            byte |= (1 << bit)
-                        }
-                    }
-                }
-                pageBuffer[y * 128 + x] = byte
-            }
-        }
-        
-        // 发送数据到SSD1306
-        for page in 0..<8 {
-            // 设置页面地址
-            device.writeI2C(addr: UInt16(address.address7Bit!), data: [0x00, 0xB0 | UInt8(page)])
-            // 设置列地址
-            device.writeI2C(addr: UInt16(address.address7Bit!), data: [0x00, 0x00]) // 低列地址
-            device.writeI2C(addr: UInt16(address.address7Bit!), data: [0x00, 0x10]) // 高列地址
-            
-            // 发送页面数据
-            let pageData = Array(pageBuffer[page * 128..<(page + 1) * 128])
-            device.writeI2C(addr: UInt16(address.address7Bit!), data: [0x40] + pageData)
-        }
-    }
+    // 绘制指针
+    let pointerAngle = Double(speed) * 2.7 * .pi / 180.0  // 调整角度范围
+    let pointerX = Int16(centerX) + Int16(cos(pointerAngle) * Double(radius - 5))
+    let pointerY = Int16(centerY) + Int16(sin(pointerAngle) * Double(radius - 5))
+    u8g2_DrawLine(u8g2, centerX, centerY, UInt16(pointerX), UInt16(pointerY))
+    
+    // 绘制中心点
+    u8g2_DrawDisc(u8g2, centerX, centerY, 2, 0xFF)
+    
+    // 绘制当前速度值（放在右边）
+    u8g2_SetFont(u8g2, u8g2_font_7x14_tr)
+    u8g2_DrawStr(u8g2, 70, 20, "\(speed)")
+    u8g2_SetFont(u8g2, u8g2_font_6x10_tr)
+    u8g2_DrawStr(u8g2, 70, 35, "km/h")
 }
 
 // 主程序
@@ -89,106 +57,31 @@ let i2cConfiguration = I2CConfiguration.fastPlus
 device.initI2CDevice(configuration: i2cConfiguration)
 let address = I2CAddress.address8BitWrite(0x78)
 
-// 创建渲染后端和屏幕
-let renderBackend = STLinkSSD1306RenderBackend(device: device, address: address)
-let uiScreen = Screen(width: 128, height: 64, backend: renderBackend)
+var u8g2Driver = SSD1306STLinkV3BridgeU8g2Driver(device: device, address: address)
 
-// 创建仪表盘背景
-let dialPath = Path()
-dialPath.addArc(center: Point(x: 64, y: 64),
-                radius: 50,
-                startAngle: .pi * 0.75,
-                endAngle: .pi * 2.25,
-                clockwise: false)
-
-// 创建刻度线
-func createTickMarks() -> [ShapeLayer] {
-    var tickLayers: [ShapeLayer] = []
-    let center = Point(x: 64, y: 64)
-    let outerRadius: Double = 50
-    let innerRadius: Double = 45
+u8g2Driver.withUnsafeU8g2 { u8g2 in
+    u8g2_InitDisplay(u8g2)
+    u8g2_SetPowerSave(u8g2, 0)
     
-    // 创建主刻度线
-    for i in 0...8 {
-        let angle = .pi * 0.75 + (.pi * 1.5 * Double(i) / 8.0)
-        let tickPath = Path()
-        let startPoint = Point(
-            x: center.x + cos(angle) * innerRadius,
-            y: center.y + sin(angle) * innerRadius
-        )
-        let endPoint = Point(
-            x: center.x + cos(angle) * outerRadius,
-            y: center.y + sin(angle) * outerRadius
-        )
-        tickPath.move(to: startPoint)
-        tickPath.addLine(to: endPoint)
+    // 动画循环
+    while true {
+        // 0 到 100
+        for speed in 0...100 {
+            u8g2_ClearBuffer(u8g2)
+            drawSpeedGauge(u8g2: u8g2, speed: speed)
+            u8g2_SendBuffer(u8g2)
+            Thread.sleep(forTimeInterval: 0.016)
+        }
         
-        let tickLayer = ShapeLayer(path: tickPath)
-        tickLayer.setStrokeColor(.white)
-        tickLayers.append(tickLayer)
+        // 100 到 0
+        for speed in (0...100).reversed() {
+            u8g2_ClearBuffer(u8g2)
+            drawSpeedGauge(u8g2: u8g2, speed: speed)
+            u8g2_SendBuffer(u8g2)
+            Thread.sleep(forTimeInterval: 0.016)
+        }
     }
     
-    return tickLayers
+    print("速度仪表盘动画完成")
 }
 
-// 创建指针
-func createNeedle(angle: Double) -> ShapeLayer {
-    let needlePath = Path()
-    let center = Point(x: 64, y: 64)
-    let length: Double = 45
-    
-    needlePath.move(to: center)
-    needlePath.addLine(to: Point(
-        x: center.x + cos(angle) * length,
-        y: center.y + sin(angle) * length
-    ))
-    
-    let needleLayer = ShapeLayer(path: needlePath)
-    needleLayer.setStrokeColor(.white)
-    needleLayer.setLineWidth(2)
-    return needleLayer
-}
-
-// 创建仪表盘图层
-let dialLayer = ShapeLayer(path: dialPath)
-dialLayer.setFillColor(.none)
-dialLayer.setStrokeColor(.white)
-
-// 添加刻度线
-let tickLayers = createTickMarks()
-
-// 添加所有图层到表面
-uiScreen.surface.addLayer(dialLayer)
-for tickLayer in tickLayers {
-    uiScreen.surface.addLayer(tickLayer)
-}
-
-// 动画循环
-var angle: Double = .pi * 0.75
-let speed: Double = 0.05 // 旋转速度
-var currentNeedle: ShapeLayer? = nil
-
-while true {
-    // 移除旧的指针
-    if let oldNeedle = currentNeedle {
-        uiScreen.surface.removeLayer(oldNeedle)
-    }
-    
-    // 创建新的指针
-    let needleLayer = createNeedle(angle: angle)
-    uiScreen.surface.addLayer(needleLayer)
-    currentNeedle = needleLayer
-    
-    // 更新角度
-    angle += speed
-    if angle > .pi * 2.25 {
-        angle = .pi * 0.75
-    }
-    
-    // 渲染和更新显示
-    uiScreen.surface.render()
-    uiScreen.update()
-    
-    // 控制动画速度
-    Thread.sleep(forTimeInterval: 0.016)
-}

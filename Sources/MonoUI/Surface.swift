@@ -9,10 +9,12 @@
 //  See LICENSE file for more information
 //
 
+import CU8g2
+
 /// A class that represents a drawing surface with a pixel buffer.
 public class Surface {
     var buffer: [UInt8]
-    private var layers: [ShapeLayer] = []
+    private var layers: [Layer] = []
     
     public let width: Int
     public let height: Int
@@ -27,15 +29,13 @@ public class Surface {
         self.buffer = Array(repeating: 0, count: width * height) // 1 bit per pixel
     }
     
-    /// Adds a shape layer to the surface.
-    /// - Parameter layer: The layer to add.
-    public func addLayer(_ layer: ShapeLayer) {
+    /// Adds a layer (ShapeLayer or TextLayer) to the surface.
+    public func addLayer(_ layer: Layer) {
         layers.append(layer)
     }
     
-    /// Removes a shape layer from the surface.
-    /// - Parameter layer: The layer to remove.
-    public func removeLayer(_ layer: ShapeLayer) {
+    /// Removes a layer from the surface.
+    public func removeLayer(_ layer: Layer) {
         if let index = layers.firstIndex(where: { $0 === layer }) {
             layers.remove(at: index)
         }
@@ -228,9 +228,13 @@ public class Surface {
         
         // 按顺序渲染每个图层
         for layer in layers {
-            drawPath(path: layer.path,
-                    fillColor: layer.fillColor,
-                    strokeColor: layer.strokeColor)
+            if let shapeLayer = layer as? ShapeLayer {
+                drawPath(path: shapeLayer.path,
+                        fillColor: shapeLayer.fillColor,
+                        strokeColor: shapeLayer.strokeColor)
+            } else if let textLayer = layer as? TextLayer {
+                drawTextLayer(textLayer)
+            }
         }
     }
     
@@ -238,5 +242,10 @@ public class Surface {
     public func clear() {
         buffer = Array(repeating: 0, count: width * height)
         layers.removeAll()
+    }
+    
+    /// 绘制文本图层（需实现具体的字体渲染调用）
+    private func drawTextLayer(_ layer: TextLayer) {
+        
     }
 } 

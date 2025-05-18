@@ -16,10 +16,15 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/CmST0us/SwiftSDL2.git", branch: "main"),
         .package(url: "https://github.com/CmST0us/SwiftSTLinkV3Bridge.git", branch: "main"),
+        .package(url: "https://github.com/CmST0us/U8g2Kit.git", branch: "main"),
     ],
     targets: [
         .target(
-            name: "MonoUI"),
+            name: "MonoUI",
+            dependencies: [
+                .product(name: "CU8g2", package: "U8g2Kit"),
+                .product(name: "U8g2Kit", package: "U8g2Kit"),
+            ]),
 
         .executableTarget(
             name: "MonoUISDLSimulator",

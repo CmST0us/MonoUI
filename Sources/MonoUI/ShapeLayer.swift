@@ -10,9 +10,9 @@
 //
 
 /// A class that represents a shape layer containing a path and its rendering properties.
-public class ShapeLayer {
-    public var path: Path
-    public private(set) var fillColor: Color = .none
+public class ShapeLayer: Layer {
+    public let path: Path
+    public private(set) var fillColor: Color = .black
     public private(set) var strokeColor: Color = .white
     public private(set) var lineWidth: Double = 1.0
     
@@ -20,6 +20,7 @@ public class ShapeLayer {
     /// - Parameter path: The path to be rendered.
     public init(path: Path) {
         self.path = path
+        super.init()
     }
     
     /// Sets the fill color for this layer.
