@@ -30,7 +30,7 @@ let package = Package(
             name: "MonoUISDLSimulator",
             dependencies: [
                 "MonoUI",
-                .product(name: "SDL2", package: "SwiftSDL2")]),
+                .product(name: "CU8g2SDL", package: "U8g2Kit")]),
 
         .executableTarget(
             name: "MonoUISTLinkV3BridgeSSD1306",

@@ -1,5 +1,5 @@
 {
-  "originHash" : "3a1fd4782f14b41250544959fef8ec6ed125b66b16fee6555dcf0a30c26c7431",
+  "originHash" : "110ace4f28dc0bc751d70ef716f8f0a7f0a36db462870833c031f870ed1df304",
   "pins" : [
     {
       "identity" : "swiftsdl2",
@@ -16,7 +16,7 @@
       "location" : "https://github.com/CmST0us/SwiftSTLinkV3Bridge.git",
       "state" : {
         "branch" : "main",
-        "revision" : "4be5c6c65f9e506422cc60448883d6364f686428"
+        "revision" : "c3f6319520764dea7d2802a4ce8c74e6b9ceb70f"
       }
     },
     {
@@ -25,7 +25,7 @@
       "location" : "https://github.com/CmST0us/U8g2Kit.git",
       "state" : {
         "branch" : "main",
-        "revision" : "f3bb46ca55871e0254b7662d9789dcf637f5d527"
+        "revision" : "34ced6e79163f7e7161196ce4ec2f3e9e310c526"
       }
     }
   ],
