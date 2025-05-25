@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -11,6 +11,7 @@ let package = Package(
     products: [
         .library(
             name: "MonoUI",
+            type: .static,
             targets: ["MonoUI"]),
     ],
     dependencies: [
@@ -24,13 +25,19 @@ let package = Package(
             dependencies: [
                 .product(name: "CU8g2", package: "U8g2Kit"),
                 .product(name: "U8g2Kit", package: "U8g2Kit"),
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
             ]),
 
         .executableTarget(
             name: "MonoUISDLSimulator",
             dependencies: [
                 "MonoUI",
-                .product(name: "CU8g2SDL", package: "U8g2Kit")]),
+                .product(name: "CU8g2SDL", package: "U8g2Kit")],
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]),
 
         .executableTarget(
             name: "MonoUISTLinkV3BridgeSSD1306",
@@ -39,6 +46,7 @@ let package = Package(
                 .product(name: "SwiftSTLinkV3Bridge", package: "SwiftSTLinkV3Bridge")
             ],
             swiftSettings: [
+                .swiftLanguageMode(.v5),
                 .unsafeFlags([
                     "-cxx-interoperability-mode=default"
                 ])
