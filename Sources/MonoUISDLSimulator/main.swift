@@ -7,7 +7,7 @@ import Glibc
 
 class SDL2Driver: Driver {
     init() {
-        super.init(u8g2_SetupBuffer_SDL_128x64, &u8g2_cb_r0)
+        super.init(u8g2_SetupBuffer_SDL_128x64, &U8g2Kit.u8g2_cb_r0)
     }
 }
 

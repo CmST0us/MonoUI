@@ -14,7 +14,7 @@ class SSD1306STLinkV3BridgeU8g2Driver: U8g2Kit.Driver {
     init(device: SwiftSTLinkV3Bridge.Bridge, address: I2CAddress) {
         self.device = device
         self.address = address
-        super.init(u8g2_Setup_ssd1306_i2c_128x64_noname_f, &u8g2_cb_r0)
+        super.init(u8g2_Setup_ssd1306_i2c_128x64_noname_f, &U8g2Kit.u8g2_cb_r0)
     }
 
 
