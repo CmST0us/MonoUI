@@ -31,7 +31,7 @@ class SSD1306STLinkV3BridgeU8g2Driver: U8g2Kit.Driver {
             }
 
             if !isTransferring {
-                device.writeI2C(addr: UInt16(address.address7Bit!), data: transferData)
+                _ = device.writeI2C(addr: UInt16(address.address7Bit!), data: transferData)
             }
             return 1
 
@@ -41,7 +41,7 @@ class SSD1306STLinkV3BridgeU8g2Driver: U8g2Kit.Driver {
             return 1
 
         case U8X8_MSG_BYTE_END_TRANSFER:
-            device.writeI2C(addr: UInt16(address.address7Bit!), data: transferData)
+            _ = device.writeI2C(addr: UInt16(address.address7Bit!), data: transferData)
             isTransferring = false
             return 1
 
