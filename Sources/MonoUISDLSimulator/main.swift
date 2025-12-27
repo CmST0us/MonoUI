@@ -3,7 +3,11 @@ import MonoUI
 import CU8g2SDL
 import U8g2Kit
 import CU8g2
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Darwin)
+import Darwin
+#endif
 
 class SDL2Driver: Driver {
     init() {
@@ -14,37 +18,39 @@ class SDL2Driver: Driver {
 
 class SDL2SimulatorApp: Application {
 
-    @AnimationValue var x: Double = 0
-    @AnimationValue var y: Double = 0
+    let router = Router()
 
+    override init(context: Context) {
+        super.init(context: context)
+    }
+    
     override func setup() {
-        
+        // 设置根页面
+        let homePage = HomePage()
+        router.setRoot(homePage)
     }
 
     override func loop() {
         driver.withUnsafeU8g2 { u8g2 in
             u8g2_ClearBuffer(u8g2)
-            u8g2_DrawRBox(u8g2, u8g2_uint_t(x), u8g2_uint_t(y), 30, 30, 4)
-        }
+            u8g2_SetBitmapMode(u8g2, 1) // 开启透明模式
+            u8g2_SetFontMode(u8g2, 1)
 
-        driver.withUnsafeU8g2 { u8g2 in
+            // 绘制 Router (包含 Pages)
+            router.draw(u8g2: u8g2)
+            
             u8g2_SendBuffer(u8g2)
         }
 
-        var key: Int32 = -1
-        key = u8g_sdl_get_key()
-        if key == 119 {
-            x = 85
+        // 输入处理
+        let key = u8g_sdl_get_key()
+        if key != -1 {
+            router.handleInput(key: key)
         }
-        if key == 113 {
-            x = 0
-        }
-
-
     }
 }
 
-@main
+// @main
 struct MonoUISDLSimulator {
     static func main() {
         let context = Context(driver: SDL2Driver())
@@ -52,3 +58,6 @@ struct MonoUISDLSimulator {
         app.run()
     }
 }
+
+// Top level code to run
+MonoUISDLSimulator.main()
