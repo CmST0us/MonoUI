@@ -50,7 +50,7 @@ extension Context {
     /// Removes an animation value from the update list.
     /// - Parameter animationValue: The animation value to remove.
     public func removeAnimationValue(_ animationValue: AnimationUpdateable) {
-        animationValues.removeAll { ObjectIdentifier($0) == ObjectIdentifier(animationValue) }
+        animationValues.removeAll { $0 === animationValue }
     }
 
     /// Updates all registered animation values.

@@ -89,8 +89,8 @@ public class Router {
     /// before being removed.
     public func dismissModal() {
         if let alert = modal as? AlertView {
-            alert.dismiss { [weak self] in
-                self?.modal = nil
+            alert.dismiss {
+                self.modal = nil
             }
         } else {
             modal = nil

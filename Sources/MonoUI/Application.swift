@@ -69,23 +69,49 @@ open class Application {
             // Calculate time to sleep to maintain frame rate
             let timeToNextFrame = (1.0 / frameRate) - (getCurrentTime() - lastFrameTime)
             if timeToNextFrame > 0 {
-                usleep(UInt32(timeToNextFrame * 1_000_000))
+                sleepMicroseconds(UInt32(timeToNextFrame * 1_000_000))
             }
         }
     }
     
-    /// Helper to get current monotonic time in seconds.
-    private func getCurrentTime() -> Double {
-        var ts = timespec()
-        #if canImport(Darwin)
-        // clock_gettime is available on macOS 10.12+, but we need to check availability or use alternative
-        // For simplicity assuming modern macOS or simulator environment where clock_gettime might be available
-        // If not, we could use ProcessInfo.processInfo.systemUptime
-        clock_gettime(CLOCK_MONOTONIC, &ts)
+    // MARK: - Platform Methods (Override for Embedded Platforms)
+    
+    /// Sleeps for the specified number of microseconds.
+    ///
+    /// Override this method in subclasses to provide platform-specific sleep implementation.
+    /// Default implementation uses `usleep` if available, otherwise busy-waits.
+    ///
+    /// - Parameter microseconds: The number of microseconds to sleep.
+    open func sleepMicroseconds(_ microseconds: UInt32) {
+        #if canImport(Glibc)
+        usleep(microseconds)
+        #elseif canImport(Darwin)
+        usleep(microseconds)
         #else
-        clock_gettime(CLOCK_MONOTONIC, &ts)
+        // Embedded Swift fallback: busy wait
+        let startTime = getCurrentTime()
+        let targetTime = startTime + Double(microseconds) / 1_000_000.0
+        while getCurrentTime() < targetTime {
+            // Busy wait - override this method for efficient platform-specific sleep
+        }
         #endif
+    }
+    
+    /// Gets the current monotonic time in seconds.
+    ///
+    /// Override this method in subclasses to provide platform-specific timing.
+    /// Default implementation uses `clock_gettime` if available.
+    ///
+    /// - Returns: The current time in seconds since an arbitrary starting point.
+    open func getCurrentTime() -> Double {
+        #if canImport(Glibc) || canImport(Darwin)
+        var ts = timespec()
+        clock_gettime(CLOCK_MONOTONIC, &ts)
         return Double(ts.tv_sec) + Double(ts.tv_nsec) / 1_000_000_000.0
+        #else
+        // Embedded Swift: Subclasses must override this method
+        fatalError("getCurrentTime() must be overridden in Embedded Swift platforms")
+        #endif
     }
 
 }

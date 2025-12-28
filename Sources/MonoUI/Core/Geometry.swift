@@ -4,6 +4,11 @@ import Glibc
 import Darwin
 #endif
 
+@_silgen_name("cosf") func cosf(_ x: Float) -> Float
+@_silgen_name("sinf") func sinf(_ x: Float) -> Float
+@_silgen_name("sqrt") func sqrt(_ x: Double) -> Double
+
+
 /// A structure representing a point in a 2D coordinate system.
 public struct Point: Equatable, Animatable {
     /// The x-coordinate of the point.
