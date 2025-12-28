@@ -14,10 +14,15 @@ let package = Package(
             type: .static,
             targets: ["MonoUI"]),
     ],
+    traits: [
+        "Default",
+        "Embedded",
+        .default(enabledTraits: ["Default"])
+    ],
     dependencies: [
         .package(url: "https://github.com/CmST0us/SwiftSDL2.git", branch: "main"),
         .package(url: "https://github.com/CmST0us/SwiftSTLinkV3Bridge.git", branch: "main"),
-        .package(url: "https://github.com/CmST0us/U8g2Kit.git", branch: "main"),
+        .package(url: "https://github.com/CmST0us/U8g2Kit.git", branch: "main", traits: ["Embedded"]),
     ],
     targets: [
         .target(
@@ -28,6 +33,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
+                .enableExperimentalFeature("Embedded", .when(traits: ["Embedded"]))
             ]),
 
         .executableTarget(
