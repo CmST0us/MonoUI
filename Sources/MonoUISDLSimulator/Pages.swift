@@ -8,7 +8,7 @@ class DetailPage: Page {
     
     init(title: String) {
         self.title = title
-        let screenSize = Context.shared?.screenSize ?? Size(width: 128, height: 64)
+        let screenSize = Context.shared.screenSize
         // 初始位置设为屏幕宽度 (屏幕外)，实际通过 offsetX 动画控制偏移
         self._offsetX = AnimationValue(wrappedValue: screenSize.width)
         super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
@@ -22,13 +22,13 @@ class DetailPage: Page {
     
     override func animateOut() {
         // 出场动画：滑出到右侧
-        let screenWidth = Context.shared?.screenSize.width ?? 128
+        let screenWidth = Context.shared.screenSize.width
         offsetX = screenWidth
     }
     
     override func isExitAnimationFinished() -> Bool {
         // 当 offsetX 接近屏幕宽度时认为完成
-        let screenWidth = Context.shared?.screenSize.width ?? 128
+        let screenWidth = Context.shared.screenSize.width
         return offsetX >= screenWidth - 0.5
     }
     
@@ -92,18 +92,21 @@ class HomePage: Page {
     static let icon1: [UInt8] = [0x00,0x00,0x00,0x40,0x00,0x00,0x40,0x04,0x00,0x40,0x04,0x00,0x40,0x04,0x00,0x50,0x14,0x00,0x50,0x15,0x00,0x54,0x15,0x00,0x55,0x55,0x01,0x50,0x55,0x00,0x50,0x15,0x00,0x50,0x04,0x00,0x40,0x04,0x00,0x40,0x04,0x00,0x40,0x00,0x00,0x00,0x00,0x00]
     static let icon2: [UInt8] = [0x80,0x00,0x48,0x01,0x38,0x02,0x98,0x04,0x48,0x09,0x24,0x12,0x12,0x24,0x09,0x48,0x66,0x30,0x64,0x10,0x04,0x17,0x04,0x15,0x04,0x17,0x04,0x15,0xfc,0x1f,0x00,0x00]
     static let icon3: [UInt8] = [0x1c,0x00,0x22,0x00,0xe3,0x3f,0x22,0x00,0x1c,0x00,0x00,0x0e,0x00,0x11,0xff,0x31,0x00,0x11,0x00,0x0e,0x1c,0x00,0x22,0x00,0xe3,0x3f,0x22,0x00,0x1c,0x00,0x00,0x00]
+    // Icon for Text/Icon test (simple test icon)
+    static let icon4: [UInt8] = icon3
 
-    // 当前选中的 Tile 索引 (0, 1, 2)
+    // 当前选中的 Tile 索引 (0, 1, 2, 3)
     var selectedIndex: Int = 0
     var tiles: [IconTileView]
     
     init() {
-        let screenSize = Context.shared?.screenSize ?? Size(width: 128, height: 64)
+        let screenSize = Context.shared.screenSize
         self.scrollView = ScrollView(frame: Rect(x: 0, y: 0, width: screenSize.width, height: 45))
         // 增加宽度以允许最后一个 Tile 居中
-        // Tile 3 center at 147. Viewport center 64. Offset needed 83.
-        // Viewport width 128. 128 + 83 = 211. 
-        self.scrollView.contentSize = Size(width: 212, height: 45)
+        // 现在有4个tiles，需要更多空间
+        // Tile 4 center at 147 + 42 = 189. Viewport center 64. Offset needed 125.
+        // Viewport width 128. 128 + 125 = 253.
+        self.scrollView.contentSize = Size(width: 254, height: 45)
         self.scrollView.direction = .horizontal
         
         // 必须在 super.init 之前初始化所有属性
@@ -146,6 +149,17 @@ class HomePage: Page {
         }
         scrollView.addSubview(tile3)
         tiles.append(tile3)
+        
+        // Tile 4: Text/Icon Test
+        let tile4 = IconTileView(frame: Rect(x: startX + (cardSize.width + spacing) * 3, y: yPos, width: cardSize.width, height: cardSize.height),
+                                 iconBits: Self.icon4,
+                                 iconSize: Size(width: 14, height: 16)) {
+            if let app = Application.shared as? SDL2SimulatorApp {
+                (app as Application).router.push(TextIconTestPage())
+            }
+        }
+        scrollView.addSubview(tile4)
+        tiles.append(tile4)
         
         self.addSubview(scrollView)
     }
@@ -210,6 +224,69 @@ class HomePage: Page {
         }
         
         scrollOffset = targetOffset
+    }
+}
+
+// MARK: - TextIconTestPage
+
+/// Test page for Text and Icon views.
+class TextIconTestPage: Page {
+    @AnimationValue var offsetX: Double
+    
+    init() {
+        let screenSize = Context.shared.screenSize
+        self._offsetX = AnimationValue(wrappedValue: screenSize.width)
+        super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
+        
+        // Create a vertical stack for text views (SwiftUI style)
+        let textStack = StackView(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height),
+                                 axis: .horizontal)
+        
+        // Add Text views using SwiftUI-style initialization
+        // Position and size are automatically managed by StackView
+        let text1 = Text("A")
+        textStack.addSubview(text1)
+        
+        textStack.addSubview(Spacer())
+
+        let text2 = Text("C")
+        textStack.addSubview(text2)
+        addSubview(textStack)
+        
+
+    }
+    
+    override func animateIn() {
+        offsetX = 0
+    }
+    
+    override func animateOut() {
+        let screenWidth = Context.shared.screenSize.width
+        offsetX = screenWidth
+    }
+    
+    override func isExitAnimationFinished() -> Bool {
+        let screenWidth = Context.shared.screenSize.width
+        return offsetX >= screenWidth - 0.5
+    }
+    
+    override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
+        frame.origin.x = offsetX
+        super.draw(u8g2: u8g2, origin: origin)
+    }
+    
+    override func handleInput(key: Int32) {
+        // 'q' (113) -> Back
+        if key == 113 {
+            if let app = Application.shared as? SDL2SimulatorApp {
+                let router = (app as Application).router
+                if router.modal != nil {
+                    router.dismissModal()
+                } else {
+                    router.pop()
+                }
+            }
+        }
     }
 }
 
