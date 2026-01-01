@@ -11,6 +11,7 @@ import Darwin
 open class Application {
 
     private let context: Context
+    public let router: Router
     private var frameRate: Double = 60.0
     private var lastFrameTime: Double = 0
 
@@ -27,6 +28,7 @@ open class Application {
     /// - Parameter context: The application context.
     public init(context: Context) {
         self.context = context
+        self.router = Router()
         Application.shared = self
     }
 

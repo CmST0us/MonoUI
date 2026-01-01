@@ -18,8 +18,6 @@ class SDL2Driver: Driver {
 
 class SDL2SimulatorApp: Application {
 
-    let router = Router()
-
     override init(context: Context) {
         super.init(context: context)
     }
@@ -53,7 +51,8 @@ class SDL2SimulatorApp: Application {
 // @main
 struct MonoUISDLSimulator {
     static func main() {
-        let context = Context(driver: SDL2Driver())
+        let screenSize = Size(width: 128, height: 64)
+        let context = Context(driver: SDL2Driver(), screenSize: screenSize)
         let app = SDL2SimulatorApp(context: context)
         app.run()
     }

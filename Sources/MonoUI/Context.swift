@@ -19,11 +19,22 @@ public class Context {
 
     /// A list of objects that require animation updates.
     private var animationValues: [AnimationUpdateable] = []
+    
+    /// The screen size of the display.
+    public let screenSize: Size
+    
+    /// The screen bounds (full screen rectangle).
+    public var screenBounds: Rect {
+        return Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height)
+    }
 
-    /// Initializes a new Context with the specified driver.
-    /// - Parameter driver: The display driver to use.
-    public init(driver: Driver) {
+    /// Initializes a new Context with the specified driver and screen size.
+    /// - Parameters:
+    ///   - driver: The display driver to use.
+    ///   - screenSize: The size of the display screen.
+    public init(driver: Driver, screenSize: Size) {
         self.driver = driver
+        self.screenSize = screenSize
         Context.shared = self
     }
 

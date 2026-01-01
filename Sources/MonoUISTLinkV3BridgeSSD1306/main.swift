@@ -97,6 +97,7 @@ device.initI2CDevice(configuration: i2cConfiguration)
 let address = I2CAddress.address8BitWrite(0x78)
 
 var u8g2Driver = SSD1306STLinkV3BridgeU8g2Driver(device: device, address: address)
-let context = Context(driver: u8g2Driver)
+let screenSize = Size(width: 128, height: 64)
+let context = Context(driver: u8g2Driver, screenSize: screenSize)
 let app = STLinkV3BridgeSSD1306App(context: context, bridge: device)
 app.run()

@@ -5,13 +5,15 @@ import CU8g2
 
 /// Detail page showing information about a selected item.
 class DetailPage: Page {
-    @AnimationValue var offsetX: Double = 128
+    @AnimationValue var offsetX: Double
     
     let title: String
     
     init(title: String) {
         self.title = title
-        super.init(frame: Rect(x: 128, y: 0, width: 128, height: 64))
+        let screenSize = Context.shared.screenSize
+        self._offsetX = AnimationValue(wrappedValue: screenSize.width)
+        super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
     }
     
     override func animateIn() {
@@ -19,11 +21,13 @@ class DetailPage: Page {
     }
     
     override func animateOut() {
-        offsetX = 128
+        let screenWidth = Context.shared.screenSize.width
+        offsetX = screenWidth
     }
     
     override func isExitAnimationFinished() -> Bool {
-        return offsetX >= 127.5
+        let screenWidth = Context.shared.screenSize.width
+        return offsetX >= screenWidth - 0.5
     }
     
     override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
@@ -36,7 +40,8 @@ class DetailPage: Page {
         let absY = origin.y + frame.origin.y
         
         u8g2_SetDrawColor(u8g2, 1)
-        u8g2_DrawFrame(u8g2, u8g2_uint_t(absX), u8g2_uint_t(absY), 128, 64)
+        u8g2_DrawFrame(u8g2, u8g2_uint_t(absX), u8g2_uint_t(absY), 
+                      u8g2_uint_t(frame.size.width), u8g2_uint_t(frame.size.height))
         
         u8g2_SetFont(u8g2, u8g2_font_6x10_tf)
         u8g2_DrawStr(u8g2, u8g2_uint_t(absX + 10), u8g2_uint_t(absY + 20), "Detail: \(title)")
@@ -83,12 +88,13 @@ class HomePage: Page {
     var tiles: [IconTileView]
     
     init() {
-        self.scrollView = ScrollView(frame: Rect(x: 0, y: 0, width: 128, height: 45))
+        let screenSize = Context.shared.screenSize
+        self.scrollView = ScrollView(frame: Rect(x: 0, y: 0, width: screenSize.width, height: 45))
         self.scrollView.contentSize = Size(width: 212, height: 45)
         self.scrollView.direction = .horizontal
         self.tiles = []
         
-        super.init(frame: Rect(x: 0, y: 0, width: 128, height: 64))
+        super.init(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
         
         let startX: Double = 45
         let spacing: Double = 6

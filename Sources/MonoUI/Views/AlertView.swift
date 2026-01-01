@@ -18,8 +18,8 @@ public class AlertView: View {
     // MARK: - Private Properties
     
     /// The vertical offset for slide animation.
-    /// Starts at 64 (below screen) and animates to `frame.origin.y`.
-    @AnimationValue private var offsetY: Double = 64
+    /// Starts at screen height (below screen) and animates to `frame.origin.y`.
+    @AnimationValue private var offsetY: Double
     
     /// The message text to display.
     private var message: String
@@ -38,6 +38,10 @@ public class AlertView: View {
     ///   - title: Optional title text.
     ///   - message: The message text to display.
     public init(frame: Rect, title: String? = nil, message: String) {
+        // Initialize offsetY to screen height (below screen) as default
+        let screenHeight = Context.shared.screenSize.height
+        self._offsetY = AnimationValue(wrappedValue: screenHeight)
+        
         self.frame = frame
         self.title = title
         self.message = message
@@ -53,7 +57,8 @@ public class AlertView: View {
     public func dismiss(completion: @escaping () -> Void) {
         isDismissing = true
         onAnimationCompleted = completion
-        offsetY = 64 // Animate off screen
+        let screenHeight = Context.shared.screenSize.height
+        offsetY = screenHeight // Animate off screen
     }
     
     // MARK: - Drawing
@@ -66,7 +71,8 @@ public class AlertView: View {
         guard let u8g2 = u8g2 else { return }
         
         // Check if dismiss animation is complete
-        if isDismissing && abs(offsetY - 64) < 1.0 {
+        let screenHeight = Context.shared.screenSize.height
+        if isDismissing && abs(offsetY - screenHeight) < 1.0 {
             onAnimationCompleted?()
             return
         }

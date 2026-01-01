@@ -33,7 +33,13 @@ public class ToastView: View {
     ///   - message: The message text to display.
     ///   - duration: How long to show the toast (default: 2.0 seconds).
     public init(message: String, duration: Double = 2.0) {
-        self.frame = Rect(x: 10, y: 50, width: 108, height: 14)
+        let screenSize = Context.shared.screenSize
+        // Position toast at bottom with margins
+        let margin: Double = 10
+        let toastHeight: Double = 14
+        let toastWidth = screenSize.width - margin * 2
+        let toastY = screenSize.height - toastHeight - margin
+        self.frame = Rect(x: margin, y: toastY, width: toastWidth, height: toastHeight)
         self.message = message
         self.duration = duration
     }
