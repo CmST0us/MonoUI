@@ -20,6 +20,7 @@ public enum ScrollDirection {
 ///
 /// `ScrollView` manages a collection of child views and renders only the portion
 /// that is visible within its frame. Content can be scrolled by modifying the `contentOffset`.
+/// Position can be managed by parent views like `StackView`.
 open class ScrollView: View {
     // MARK: - Public Properties
     
@@ -42,7 +43,19 @@ open class ScrollView: View {
     
     // MARK: - Initialization
     
+    /// Initializes a new scroll view with the specified size.
+    /// Position is managed by parent views (e.g., StackView).
+    /// - Parameters:
+    ///   - size: The size of the scroll view viewport.
+    ///   - direction: The scrolling direction (default: .vertical).
+    public init(size: Size, direction: ScrollDirection = .vertical) {
+        self.frame = Rect(x: 0, y: 0, width: size.width, height: size.height)
+        self.contentSize = size
+        self.direction = direction
+    }
+    
     /// Initializes a new scroll view with the specified frame.
+    /// Use this when you need to manually position the scroll view.
     /// - Parameter frame: The frame of the scroll view.
     public init(frame: Rect) {
         self.frame = frame

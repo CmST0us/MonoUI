@@ -9,7 +9,14 @@ import Darwin
 
 /// A view that displays an icon bitmap.
 ///
-/// `Icon` is used to render icon graphics from XBM bitmap data.
+/// `Icon` is similar to SwiftUI's image views, focusing on content rather than position.
+/// Position and layout are managed by parent views like `StackView`.
+///
+/// Example:
+/// ```swift
+/// let icon = Icon(iconBits: iconData, iconSize: Size(width: 16, height: 16))
+/// stackView.addSubview(icon)  // Position is managed by StackView
+/// ```
 public class Icon: View {
     // MARK: - Public Properties
     
@@ -45,7 +52,24 @@ public class Icon: View {
     
     // MARK: - Initialization
     
-    /// Initializes a new icon view.
+    /// Initializes a new icon view with the specified icon data.
+    /// This is the primary initializer, similar to SwiftUI's `Image`.
+    /// Position is managed by parent views (e.g., StackView).
+    /// - Parameters:
+    ///   - iconBits: The icon bitmap data in XBM format.
+    ///   - iconSize: The size of the icon in pixels.
+    ///   - drawMode: The draw mode for rendering (default: .normal).
+    public init(iconBits: [UInt8]?, iconSize: Size, drawMode: DrawMode = .normal) {
+        self.iconBits = iconBits
+        self.iconSize = iconSize
+        self.drawMode = drawMode
+        // Frame starts at zero with icon size, position will be set by layout system
+        self.frame = Rect(x: 0, y: 0, width: iconSize.width, height: iconSize.height)
+    }
+    
+    /// Initializes a new icon view with a fixed frame.
+    /// Use this only when you need to manually position the icon.
+    /// For most cases, use `Icon(iconBits:iconSize:)` and let StackView manage positioning.
     /// - Parameters:
     ///   - frame: The frame of the icon view.
     ///   - iconBits: The icon bitmap data in XBM format.
@@ -56,20 +80,6 @@ public class Icon: View {
         self.iconBits = iconBits
         self.iconSize = iconSize
         self.drawMode = drawMode
-    }
-    
-    /// Initializes a new icon view at a specific position.
-    /// - Parameters:
-    ///   - x: The x-coordinate of the icon position.
-    ///   - y: The y-coordinate of the icon position.
-    ///   - iconBits: The icon bitmap data in XBM format.
-    ///   - iconSize: The size of the icon in pixels.
-    ///   - drawMode: The draw mode for rendering (default: .normal).
-    public init(x: Double, y: Double, iconBits: [UInt8]?, iconSize: Size, drawMode: DrawMode = .normal) {
-        self.iconBits = iconBits
-        self.iconSize = iconSize
-        self.drawMode = drawMode
-        self.frame = Rect(x: x, y: y, width: iconSize.width, height: iconSize.height)
     }
     
     // MARK: - Drawing

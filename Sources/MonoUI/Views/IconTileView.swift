@@ -11,6 +11,7 @@ import Darwin
 ///
 /// `IconTileView` is typically used to represent selectable items in a grid or list,
 /// such as menu items or app icons.
+/// Position can be managed by parent views like `StackView`.
 public class IconTileView: View {
     // MARK: - Public Properties
     
@@ -33,7 +34,25 @@ public class IconTileView: View {
     
     // MARK: - Initialization
     
-    /// Initializes a new icon tile view.
+    /// Initializes a new icon tile view with specified size.
+    /// Position is managed by parent views (e.g., StackView).
+    /// - Parameters:
+    ///   - size: The size of the tile (default: 36x36).
+    ///   - iconBits: Optional icon bitmap data in XBM format.
+    ///   - iconSize: The size of the icon within the tile.
+    ///   - onClick: Optional callback for click events.
+    public init(size: Size = Size(width: 36, height: 36),
+                iconBits: [UInt8]? = nil, 
+                iconSize: Size = .zero,
+                onClick: (() -> Void)? = nil) {
+        self.frame = Rect(x: 0, y: 0, width: size.width, height: size.height)
+        self.iconBits = iconBits
+        self.iconSize = iconSize
+        self.onClick = onClick
+    }
+    
+    /// Initializes a new icon tile view with a fixed frame.
+    /// Use this only when you need to manually position the tile.
     /// - Parameters:
     ///   - frame: The frame of the tile.
     ///   - iconBits: Optional icon bitmap data in XBM format.

@@ -95,7 +95,7 @@ class HomePage: Page {
     // Icon for Text/Icon test (simple test icon)
     static let icon4: [UInt8] = icon3
 
-    // 当前选中的 Tile 索引 (0, 1, 2, 3)
+    // 当前选中的 Tile 索引 (0, 1, 2, 3, 4)
     var selectedIndex: Int = 0
     var tiles: [IconTileView]
     
@@ -160,6 +160,24 @@ class HomePage: Page {
         }
         scrollView.addSubview(tile4)
         tiles.append(tile4)
+        
+        // Tile 5: ScrollView Test
+        let tile5 = IconTileView(frame: Rect(x: startX + (cardSize.width + spacing) * 4, y: yPos, width: cardSize.width, height: cardSize.height),
+                                 iconBits: Self.icon4,
+                                 iconSize: Size(width: 14, height: 16)) {
+            if let app = Application.shared as? SDL2SimulatorApp {
+                (app as Application).router.push(ScrollViewTestPage())
+            }
+        }
+        scrollView.addSubview(tile5)
+        tiles.append(tile5)
+        
+        // Update scrollView contentSize to accommodate 5 tiles
+        let tile5EndX = startX + (cardSize.width + spacing) * 4 + cardSize.width
+        let tile5CenterX = tile5EndX - cardSize.width / 2
+        let scrollViewCenterX = scrollView.frame.size.width / 2
+        let neededOffset = tile5CenterX - scrollViewCenterX
+        scrollView.contentSize = Size(width: scrollView.frame.size.width + neededOffset, height: 45)
         
         self.addSubview(scrollView)
     }
@@ -276,6 +294,91 @@ class TextIconTestPage: Page {
     }
     
     override func handleInput(key: Int32) {
+        // 'q' (113) -> Back
+        if key == 113 {
+            if let app = Application.shared as? SDL2SimulatorApp {
+                let router = (app as Application).router
+                if router.modal != nil {
+                    router.dismissModal()
+                } else {
+                    router.pop()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - ScrollViewTestPage
+
+/// Test page for ScrollView containing StackView with Text list.
+class ScrollViewTestPage: Page {
+    @AnimationValue var offsetX: Double
+    let listMenu: ListMenu
+    
+    init() {
+        let screenSize = Context.shared.screenSize
+        self._offsetX = AnimationValue(wrappedValue: screenSize.width)
+        
+        // Create a ListMenu
+        self.listMenu = ListMenu(size: Size(width: screenSize.width, height: screenSize.height),
+                                direction: .vertical)
+        
+        super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
+        
+        // Set list items (text strings)
+        let texts = [
+            "Item 1: First",
+            "Item 2: Second",
+            "Item 3: Third",
+            "Item 4: Fourth",
+            "Item 5: Fifth",
+            "Item 6: Sixth",
+            "Item 7: Seventh",
+            "Item 8: Eighth",
+            "Item 9: Ninth",
+            "Item 10: Tenth"
+        ]
+        
+        // Set items in ListMenu (no StackView needed)
+        listMenu.setItems(texts)
+        
+        // Initialize cursor to first item
+        listMenu.selectedIndex = 0
+        
+        // Add ListMenu to page
+        addSubview(listMenu)
+    }
+    
+    override func animateIn() {
+        offsetX = 0
+    }
+    
+    override func animateOut() {
+        let screenWidth = Context.shared.screenSize.width
+        offsetX = screenWidth
+    }
+    
+    override func isExitAnimationFinished() -> Bool {
+        let screenWidth = Context.shared.screenSize.width
+        return offsetX >= screenWidth - 0.5
+    }
+    
+    override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
+        frame.origin.x = offsetX
+        super.draw(u8g2: u8g2, origin: origin)
+    }
+    
+    override func handleInput(key: Int32) {
+        // 'w' (119) -> Move cursor up
+        if key == 119 {
+            listMenu.moveUp()
+        }
+        
+        // 's' (115) -> Move cursor down
+        if key == 115 {
+            listMenu.moveDown()
+        }
+        
         // 'q' (113) -> Back
         if key == 113 {
             if let app = Application.shared as? SDL2SimulatorApp {
