@@ -105,6 +105,14 @@ public class AnimationValue<T: Animatable>: AnimationUpdateable {
         return self
     }
     
+    /// Sets the current value immediately without animation.
+    /// This is useful when you want to reset the animation starting point.
+    /// - Parameter newValue: The new current value to set.
+    public func setCurrentValue(_ newValue: T) {
+        value = newValue
+        target = newValue
+    }
+    
     /// Updates the current value by interpolating towards the target.
     /// This is called automatically by the `Context` on each frame.
     public func update() {

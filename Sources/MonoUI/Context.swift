@@ -19,7 +19,7 @@ public class Context {
 
     /// A list of objects that require animation updates.
     private var animationValues: [AnimationUpdateable] = []
-    
+
     /// The screen size of the display.
     public let screenSize: Size
     

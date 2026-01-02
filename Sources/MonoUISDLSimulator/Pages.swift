@@ -85,119 +85,238 @@ class DetailPage: Page {
 }
 
 class HomePage: Page {
-    let scrollView: ScrollView
-    @AnimationValue var scrollOffset: Double = 0
+    // MARK: - Constants (from reference code)
+    private static let TILE_ICON_H: Double = 30      // 磁贴图标高度
+    private static let TILE_ICON_W: Double = 30      // 磁贴图标宽度
+    private static let TILE_ICON_S: Double = 36      // 磁贴图标间距
+    private static let TILE_INDI_H: Double = 27     // 磁贴大标题指示器高度
+    private static let TILE_INDI_W: Double = 7       // 磁贴大标题指示器宽度
+    private static let TILE_INDI_S: Double = 36      // 磁贴大标题指示器上边距
+    private static let TILE_B_TITLE_H: Double = 18   // 磁贴大标题字体高度
     
-    // 数据源
-    static let icon1: [UInt8] = [0x00,0x00,0x00,0x40,0x00,0x00,0x40,0x04,0x00,0x40,0x04,0x00,0x40,0x04,0x00,0x50,0x14,0x00,0x50,0x15,0x00,0x54,0x15,0x00,0x55,0x55,0x01,0x50,0x55,0x00,0x50,0x15,0x00,0x50,0x04,0x00,0x40,0x04,0x00,0x40,0x04,0x00,0x40,0x00,0x00,0x00,0x00,0x00]
-    static let icon2: [UInt8] = [0x80,0x00,0x48,0x01,0x38,0x02,0x98,0x04,0x48,0x09,0x24,0x12,0x12,0x24,0x09,0x48,0x66,0x30,0x64,0x10,0x04,0x17,0x04,0x15,0x04,0x17,0x04,0x15,0xfc,0x1f,0x00,0x00]
-    static let icon3: [UInt8] = [0x1c,0x00,0x22,0x00,0xe3,0x3f,0x22,0x00,0x1c,0x00,0x00,0x0e,0x00,0x11,0xff,0x31,0x00,0x11,0x00,0x0e,0x1c,0x00,0x22,0x00,0xe3,0x3f,0x22,0x00,0x1c,0x00,0x00,0x00]
-    // Icon for Text/Icon test (simple test icon)
-    static let icon4: [UInt8] = icon3
-
-    // 当前选中的 Tile 索引 (0, 1, 2, 3, 4)
-    var selectedIndex: Int = 0
-    var tiles: [IconTileView]
+    // MARK: - Icon Data (from reference code main_icon_pic)
+    static let iconSleep: [UInt8] = [
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xF1,0x3F,
+        0xFF,0xFF,0xC3,0x3F,0xFF,0xFF,0x87,0x3F,0xFF,0xFF,0x07,0x3F,0xFF,0xFF,0x0F,0x3E,
+        0xFF,0xFF,0x0F,0x3E,0xFF,0xFF,0x0F,0x3C,0xFF,0xFF,0x0F,0x3C,0xFF,0xFF,0x0F,0x38,
+        0xFF,0xFF,0x0F,0x38,0xFF,0xFF,0x0F,0x38,0xFF,0xFF,0x07,0x38,0xFF,0xFF,0x07,0x38,
+        0xFF,0xFF,0x03,0x38,0xF7,0xFF,0x01,0x38,0xE7,0xFF,0x00,0x3C,0x87,0x3F,0x00,0x3C,
+        0x0F,0x00,0x00,0x3E,0x0F,0x00,0x00,0x3E,0x1F,0x00,0x00,0x3F,0x3F,0x00,0x80,0x3F,
+        0x7F,0x00,0xC0,0x3F,0xFF,0x01,0xF0,0x3F,0xFF,0x07,0xFC,0x3F,0xFF,0xFF,0xFF,0x3F,
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F
+    ]
+    
+    static let iconEditor: [UInt8] = [
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xF9,0xE7,0x3F,
+        0xFF,0xF9,0xE7,0x3F,0xFF,0xF9,0xE7,0x3F,0xFF,0xF0,0xE7,0x3F,0x7F,0xE0,0xE7,0x3F,
+        0x7F,0xE0,0xC3,0x3F,0x7F,0xE0,0xC3,0x3F,0x7F,0xE0,0xC3,0x3F,0x7F,0xE0,0xE7,0x3F,
+        0xFF,0xF0,0xE7,0x3F,0xFF,0xF9,0xE7,0x3F,0xFF,0xF9,0xE7,0x3F,0xFF,0xF9,0xE7,0x3F,
+        0xFF,0xF9,0xE7,0x3F,0xFF,0xF9,0xC3,0x3F,0xFF,0xF9,0x81,0x3F,0xFF,0xF0,0x81,0x3F,
+        0xFF,0xF0,0x81,0x3F,0xFF,0xF0,0x81,0x3F,0xFF,0xF9,0x81,0x3F,0xFF,0xF9,0xC3,0x3F,
+        0xFF,0xF9,0xE7,0x3F,0xFF,0xF9,0xE7,0x3F,0xFF,0xF9,0xE7,0x3F,0xFF,0xFF,0xFF,0x3F,
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F
+    ]
+    
+    static let iconVolt: [UInt8] = [
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xEF,0xFF,0xFF,0x3F,0xC7,0xFF,0xFF,0x3F,
+        0xC7,0xF3,0xFF,0x3F,0x83,0xC0,0xFF,0x3F,0xEF,0xCC,0xFF,0x3F,0x6F,0x9E,0xFF,0x3F,
+        0x6F,0x9E,0xFF,0x3F,0x2F,0x3F,0xFF,0x3F,0x2F,0x3F,0xFF,0x3F,0x8F,0x7F,0xFE,0x3F,
+        0x8F,0x7F,0xFE,0x39,0x8F,0x7F,0xFE,0x39,0xCF,0xFF,0xFC,0x3C,0xCF,0xFF,0xFC,0x3C,
+        0xEF,0xFF,0xFC,0x3C,0xEF,0xFF,0x79,0x3E,0xEF,0xFF,0x79,0x3E,0xEF,0xFF,0x33,0x3F,
+        0xEF,0xFF,0x33,0x3F,0xEF,0xFF,0x87,0x3F,0xEF,0xFF,0xCF,0x3F,0xEF,0xFF,0x7F,0x3E,
+        0xEF,0xFF,0x7F,0x38,0x0F,0x00,0x00,0x30,0xFF,0xFF,0x7F,0x38,0xFF,0xFF,0x7F,0x3E,
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,
+    ]
+    
+    static let iconSetting: [UInt8] = [
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,
+        0xFF,0x1F,0xFE,0x3F,0xFF,0x1F,0xFE,0x3F,0xFF,0x0C,0xCC,0x3F,0x7F,0x00,0x80,0x3F,
+        0x3F,0x00,0x00,0x3F,0x3F,0xE0,0x01,0x3F,0x7F,0xF8,0x87,0x3F,0x7F,0xFC,0x8F,0x3F,
+        0x3F,0xFC,0x0F,0x3F,0x0F,0x3E,0x1F,0x3C,0x0F,0x1E,0x1E,0x3C,0x0F,0x1E,0x1E,0x3C,
+        0x0F,0x3E,0x1F,0x3C,0x3F,0xFC,0x0F,0x3F,0x7F,0xFC,0x8F,0x3F,0x7F,0xF8,0x87,0x3F,
+        0x3F,0xE0,0x01,0x3F,0x3F,0x00,0x00,0x3F,0x7F,0x00,0x80,0x3F,0xFF,0x0C,0xCC,0x3F,
+        0xFF,0x1F,0xFE,0x3F,0xFF,0x1F,0xFE,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,
+        0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F
+    ]
+    
+    // MARK: - Menu Items
+    private let menuItems = ["Sleep", "Editor", "Volt", "Setting"]
+    private let menuIcons = [iconSleep, iconEditor, iconVolt, iconSetting]
+    
+    // MARK: - Animation Properties
+    @AnimationValue var iconX: Double = 0
+    @AnimationValue var titleY: Double
+    @AnimationValue var indiX: Double = 0
+    
+    // MARK: - State
+    var selectedIndex: Int = 0 {
+        didSet {
+            updateAnimations()
+        }
+    }
+    private var isInitialized: Bool = false
+    
+    // MARK: - Computed Properties
+    private static var titleYCalc: Double {
+        return TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H * 2
+    }
+    
+    private static var titleYTargetCalc: Double {
+        return TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H
+    }
     
     init() {
         let screenSize = Context.shared.screenSize
-        self.scrollView = ScrollView(frame: Rect(x: 0, y: 0, width: screenSize.width, height: 45))
-        // 增加宽度以允许最后一个 Tile 居中
-        // 现在有4个tiles，需要更多空间
-        // Tile 4 center at 147 + 42 = 189. Viewport center 64. Offset needed 125.
-        // Viewport width 128. 128 + 125 = 253.
-        self.scrollView.contentSize = Size(width: 254, height: 45)
-        self.scrollView.direction = .horizontal
         
-        // 必须在 super.init 之前初始化所有属性
-        self.tiles = []
+        // Calculate initial values
+        let initialTitleY = Self.titleYCalc
+        let initialTitleYTarget = Self.titleYTargetCalc
+        
+        // Initialize animation values
+        self._titleY = AnimationValue(wrappedValue: initialTitleY)
         
         super.init(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
         
-        let startX: Double = 45
-        let spacing: Double = 6
-        let cardSize = Size(width: 36, height: 36)
-        let yPos: Double = 4
+        // Set animation speeds (from reference code: TILE_ANI = 30)
+        _iconX.speed = 30
+        _titleY.speed = 30
+        _indiX.speed = 30
         
-        let tile1 = IconTileView(frame: Rect(x: startX, y: yPos, width: cardSize.width, height: cardSize.height),
-                                 iconBits: Self.icon1,
-                                 iconSize: Size(width: 17, height: 16)) {
-            // Click Handler
-            if let app = Application.shared as? SDL2SimulatorApp {
-                (app as Application).router.push(DetailPage(title: "Music"))
-            }
-        }
-        scrollView.addSubview(tile1)
-        tiles.append(tile1)
+        // Initialize animation values
+        iconX = 0
+        titleY = initialTitleY
+        indiX = 0
         
-        let tile2 = IconTileView(frame: Rect(x: startX + cardSize.width + spacing, y: yPos, width: cardSize.width, height: cardSize.height),
-                                 iconBits: Self.icon2,
-                                 iconSize: Size(width: 15, height: 16)) {
-            if let app = Application.shared as? SDL2SimulatorApp {
-                (app as Application).router.push(DetailPage(title: "Home"))
-            }
-        }
-        scrollView.addSubview(tile2)
-        tiles.append(tile2)
+        // Set initial targets
+        iconX = Self.TILE_ICON_S
+        titleY = initialTitleYTarget
+        indiX = Self.TILE_INDI_W
+    }
+    
+    private func updateAnimations() {
+        guard isInitialized else { return }
         
-        let tile3 = IconTileView(frame: Rect(x: startX + (cardSize.width + spacing) * 2, y: yPos, width: cardSize.width, height: cardSize.height),
-                                 iconBits: Self.icon3,
-                                 iconSize: Size(width: 14, height: 16)) {
-            if let app = Application.shared as? SDL2SimulatorApp {
-                (app as Application).router.push(DetailPage(title: "Download"))
-            }
-        }
-        scrollView.addSubview(tile3)
-        tiles.append(tile3)
+        // Update icon X position based on selected index
+        iconX = -Double(selectedIndex) * Self.TILE_ICON_S
         
-        // Tile 4: Text/Icon Test
-        let tile4 = IconTileView(frame: Rect(x: startX + (cardSize.width + spacing) * 3, y: yPos, width: cardSize.width, height: cardSize.height),
-                                 iconBits: Self.icon4,
-                                 iconSize: Size(width: 14, height: 16)) {
-            if let app = Application.shared as? SDL2SimulatorApp {
-                (app as Application).router.push(TextIconTestPage())
-            }
-        }
-        scrollView.addSubview(tile4)
-        tiles.append(tile4)
+        // Update title Y animation (from bottom to top)
+        // When switching tiles, text should animate from bottom to top
+        // First set current value to bottom position immediately (no animation)
+        _titleY.setCurrentValue(Self.titleYCalc)
+        // Then set target to animate to top position
+        titleY = Self.titleYTargetCalc
         
-        // Tile 5: ScrollView Test
-        let tile5 = IconTileView(frame: Rect(x: startX + (cardSize.width + spacing) * 4, y: yPos, width: cardSize.width, height: cardSize.height),
-                                 iconBits: Self.icon4,
-                                 iconSize: Size(width: 14, height: 16)) {
-            if let app = Application.shared as? SDL2SimulatorApp {
-                (app as Application).router.push(ScrollViewTestPage())
-            }
-        }
-        scrollView.addSubview(tile5)
-        tiles.append(tile5)
-        
-        // Update scrollView contentSize to accommodate 5 tiles
-        let tile5EndX = startX + (cardSize.width + spacing) * 4 + cardSize.width
-        let tile5CenterX = tile5EndX - cardSize.width / 2
-        let scrollViewCenterX = scrollView.frame.size.width / 2
-        let neededOffset = tile5CenterX - scrollViewCenterX
-        scrollView.contentSize = Size(width: scrollView.frame.size.width + neededOffset, height: 45)
-        
-        self.addSubview(scrollView)
+        // Reset indicator when selection changes
+        _indiX.setCurrentValue(0)
+        indiX = Self.TILE_INDI_W
     }
     
     override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
-        scrollView.contentOffset.x = scrollOffset
+        guard let u8g2 = u8g2 else { return }
+        
         super.draw(u8g2: u8g2, origin: origin)
         
-        // 绘制底部固定条
-        if let u8g2 = u8g2 {
-             u8g2_DrawBox(u8g2, 0, 47, 4, 17)
+        let screenSize = Context.shared.screenSize
+        let absX = origin.x + frame.origin.x
+        let absY = origin.y + frame.origin.y
+        
+        // Set clipping window to prevent icons from drawing outside screen bounds
+        u8g2_SetClipWindow(u8g2,
+                           u8g2_uint_t(max(0, absX)),
+                           u8g2_uint_t(max(0, absY)),
+                           u8g2_uint_t(absX + screenSize.width),
+                           u8g2_uint_t(absY + screenSize.height))
+        
+        // Check if initialization animation is complete
+        if !isInitialized {
+            let iconXTarget = Self.TILE_ICON_S
+            let titleYTarget = Self.titleYTargetCalc
+            if abs(iconX - iconXTarget) < 0.15 && abs(titleY - titleYTarget) < 0.15 {
+                isInitialized = true
+                // Reset icon X to final position
+                iconX = -Double(selectedIndex) * Self.TILE_ICON_S
+            }
         }
+        
+        // Draw icons
+        // Reference code: (DISP_W - TILE_ICON_W) / 2 + (int16_t)tile.icon_x + i * TILE_ICON_S
+        // where tile.icon_x = - ui.select[ui.layer] * TILE_ICON_S after initialization
+        u8g2_SetDrawColor(u8g2, 1)
+        for (index, iconBits) in menuIcons.enumerated() {
+            let iconXPos: Double
+            if !isInitialized {
+                // Initial animation: icons slide in from center
+                // Reference: (DISP_W - TILE_ICON_W) / 2 + i * tile.icon_x - TILE_ICON_S * ui.select[ui.layer]
+                iconXPos = (screenSize.width - Self.TILE_ICON_W) / 2 + Double(index) * iconX - Self.TILE_ICON_S * Double(selectedIndex)
+            } else {
+                // Normal state: (DISP_W - TILE_ICON_W) / 2 + (int16_t)tile.icon_x + i * TILE_ICON_S
+                iconXPos = (screenSize.width - Self.TILE_ICON_W) / 2 + iconX + Double(index) * Self.TILE_ICON_S
+            }
+            
+            // Calculate icon position (may be negative, which is OK - clipping will handle it)
+            let iconDrawX = absX + iconXPos
+            let iconDrawY = absY
+            
+            // Only draw if icon is within or partially within screen bounds
+            // Icon is visible if its right edge is past screen left, and left edge is before screen right
+            let iconRightEdge = iconDrawX + Self.TILE_ICON_W
+            let iconLeftEdge = iconDrawX
+            let screenRight = absX + screenSize.width
+            let screenLeft = absX
+            
+            if iconRightEdge > screenLeft && iconLeftEdge < screenRight {
+                iconBits.withUnsafeBufferPointer { ptr in
+                    guard let baseAddress = ptr.baseAddress else { return }
+                    // Use bitPattern to allow negative coordinates (clipping window handles boundaries)
+                    // Clamp to Int16 range to avoid overflow
+                    let clampedX = max(Int16.min, min(Int16.max, Int16(iconDrawX)))
+                    let clampedY = max(Int16.min, min(Int16.max, Int16(iconDrawY)))
+                    u8g2_DrawXBM(u8g2,
+                                u8g2_uint_t(bitPattern: clampedX),
+                                u8g2_uint_t(bitPattern: clampedY),
+                                u8g2_uint_t(Self.TILE_ICON_W),
+                                u8g2_uint_t(Self.TILE_ICON_H),
+                                baseAddress)
+                }
+            }
+        }
+        
+        // Restore clipping window after drawing icons
+        u8g2_SetMaxClipWindow(u8g2)
+        
+        // Draw title indicator (left side bar)
+        u8g2_DrawBox(u8g2,
+                    u8g2_uint_t(max(0, min(absX, Double(UInt16.max)))),
+                    u8g2_uint_t(max(0, min(absY + Self.TILE_INDI_S, Double(UInt16.max)))),
+                    u8g2_uint_t(max(0, min(indiX, Double(UInt16.max)))),
+                    u8g2_uint_t(Self.TILE_INDI_H))
+        
+        // Draw title text
+        // Reference code: u8g2_font_helvB18_tr, TILE_B_TITLE_H = 18
+        // Position: ((DISP_W - TILE_INDI_W) - u8g2.getStrWidth(...)) / 2 + TILE_INDI_W
+        // Y position: TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H (baseline)
+        let titleText = menuItems[selectedIndex]
+        u8g2_SetFont(u8g2, u8g2_font_helvB18_tr)
+        
+        let textWidth = Double(u8g2_GetStrWidth(u8g2, titleText))
+        // Reference: ((DISP_W - TILE_INDI_W) - u8g2.getStrWidth(...)) / 2 + TILE_INDI_W
+        let textX = ((screenSize.width - Self.TILE_INDI_W) - textWidth) / 2 + Self.TILE_INDI_W
+        
+        // Y position: titleYTargetCalc is the baseline position
+        // Reference: TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H
+        let textBaselineY = absY + titleY
+        
+        u8g2_DrawStr(u8g2,
+                    u8g2_uint_t(max(0, min(absX + textX, Double(UInt16.max)))),
+                    u8g2_uint_t(max(0, min(textBaselineY, Double(UInt16.max)))),
+                    titleText)
     }
     
     override func handleInput(key: Int32) {
         // 'd' (100) -> Next
         if key == 100 {
-            if selectedIndex < tiles.count - 1 {
+            if selectedIndex < menuItems.count - 1 {
                 selectedIndex += 1
-                scrollToSelected()
             }
         }
         
@@ -205,43 +324,35 @@ class HomePage: Page {
         if key == 97 {
             if selectedIndex > 0 {
                 selectedIndex -= 1
-                scrollToSelected()
             }
         }
         
-        // 'Enter' or 'Space' or 'w' -> Click/Select
-        // Assuming 'e' (101) for Enter/Confirm for now
+        // 'Enter' or 'e' (101) -> Select/Click
         if key == 101 {
-            tiles[selectedIndex].onClick?()
+            handleSelection()
         }
     }
     
-    private func scrollToSelected() {
-        // 计算居中偏移量
-        // 目标是将 selectedIndex 对应的 Tile 居中显示
-        // Tile 中心点 x 坐标 = tile.x + tile.width / 2
-        // ScrollView 中心点 x 坐标 = scrollView.width / 2
-        // contentOffset.x = Tile 中心点 x - ScrollView 中心点 x
-        
-        let tile = tiles[selectedIndex]
-        let tileCenterX = tile.frame.origin.x + tile.frame.size.width / 2
-        let scrollViewCenterX = scrollView.frame.size.width / 2
-        
-        var targetOffset = tileCenterX - scrollViewCenterX
-        
-        // 边界处理：不让内容滚出可视区域太多（可选，看设计需求，这里做简单的 clamp）
-        // 最小 offset = 0
-        // 最大 offset = contentSize.width - scrollView.width
-        let maxOffset = scrollView.contentSize.width - scrollView.frame.size.width
-        
-        // 如果内容比视口小，则不需要滚动或居中显示（这里假设内容比视口宽）
-        if maxOffset > 0 {
-            targetOffset = max(0, min(targetOffset, maxOffset))
-        } else {
-            targetOffset = 0
+    private func handleSelection() {
+        switch selectedIndex {
+        case 0: // Sleep
+            // TODO: Implement sleep functionality
+            break
+        case 1: // Editor
+            if let app = Application.shared as? SDL2SimulatorApp {
+                (app as Application).router.push(TextIconTestPage())
+            }
+        case 2: // Volt
+            if let app = Application.shared as? SDL2SimulatorApp {
+                (app as Application).router.push(DetailPage(title: "Volt"))
+            }
+        case 3: // Setting
+            if let app = Application.shared as? SDL2SimulatorApp {
+                (app as Application).router.push(ScrollViewTestPage())
+            }
+        default:
+            break
         }
-        
-        scrollOffset = targetOffset
     }
 }
 
