@@ -85,15 +85,6 @@ class DetailPage: Page {
 }
 
 class HomePage: Page {
-    // MARK: - Constants (from reference code)
-    private static let TILE_ICON_H: Double = 30      // 磁贴图标高度
-    private static let TILE_ICON_W: Double = 30      // 磁贴图标宽度
-    private static let TILE_ICON_S: Double = 36      // 磁贴图标间距
-    private static let TILE_INDI_H: Double = 27     // 磁贴大标题指示器高度
-    private static let TILE_INDI_W: Double = 7       // 磁贴大标题指示器宽度
-    private static let TILE_INDI_S: Double = 36      // 磁贴大标题指示器上边距
-    private static let TILE_B_TITLE_H: Double = 18   // 磁贴大标题字体高度
-    
     // MARK: - Icon Data (from reference code main_icon_pic)
     static let iconSleep: [UInt8] = [
         0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xF1,0x3F,
@@ -139,202 +130,54 @@ class HomePage: Page {
         0xFF,0xFF,0xFF,0x3F,0xFF,0xFF,0xFF,0x3F
     ]
     
-    // MARK: - Menu Items
-    private let menuItems = ["Sleep", "Editor", "Volt", "Setting"]
-    private let menuIcons = [iconSleep, iconEditor, iconVolt, iconSetting]
-    
-    // MARK: - Animation Properties
-    @AnimationValue var iconX: Double = 0
-    @AnimationValue var titleY: Double
-    @AnimationValue var indiX: Double = 0
-    
-    // MARK: - State
-    var selectedIndex: Int = 0 {
-        didSet {
-            updateAnimations()
-        }
-    }
-    private var isInitialized: Bool = false
-    
-    // MARK: - Computed Properties
-    private static var titleYCalc: Double {
-        return TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H * 2
-    }
-    
-    private static var titleYTargetCalc: Double {
-        return TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H
-    }
+    // MARK: - Properties
+    private let tileMenu: TileMenu
     
     init() {
         let screenSize = Context.shared.screenSize
         
-        // Calculate initial values
-        let initialTitleY = Self.titleYCalc
-        let initialTitleYTarget = Self.titleYTargetCalc
-        
-        // Initialize animation values
-        self._titleY = AnimationValue(wrappedValue: initialTitleY)
+        // Create TileMenu
+        self.tileMenu = TileMenu(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
         
         super.init(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
         
-        // Set animation speeds (from reference code: TILE_ANI = 30)
-        _iconX.speed = 30
-        _titleY.speed = 30
-        _indiX.speed = 30
+        // Setup menu items and icons
+        let menuItems = ["Sleep", "Editor", "Volt", "Setting"]
+        let menuIcons = [Self.iconSleep, Self.iconEditor, Self.iconVolt, Self.iconSetting]
+        tileMenu.setItems(menuItems, icons: menuIcons)
         
-        // Initialize animation values
-        iconX = 0
-        titleY = initialTitleY
-        indiX = 0
+        // Setup selection callback
+        tileMenu.onSelect = { [weak self] index in
+            self?.handleSelection(index: index)
+        }
         
-        // Set initial targets
-        iconX = Self.TILE_ICON_S
-        titleY = initialTitleYTarget
-        indiX = Self.TILE_INDI_W
-    }
-    
-    private func updateAnimations() {
-        guard isInitialized else { return }
-        
-        // Update icon X position based on selected index
-        iconX = -Double(selectedIndex) * Self.TILE_ICON_S
-        
-        // Update title Y animation (from bottom to top)
-        // When switching tiles, text should animate from bottom to top
-        // First set current value to bottom position immediately (no animation)
-        _titleY.setCurrentValue(Self.titleYCalc)
-        // Then set target to animate to top position
-        titleY = Self.titleYTargetCalc
-        
-        // Reset indicator when selection changes
-        _indiX.setCurrentValue(0)
-        indiX = Self.TILE_INDI_W
+        // Add tile menu as subview
+        addSubview(tileMenu)
     }
     
     override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
-        guard let u8g2 = u8g2 else { return }
-        
         super.draw(u8g2: u8g2, origin: origin)
-        
-        let screenSize = Context.shared.screenSize
-        let absX = origin.x + frame.origin.x
-        let absY = origin.y + frame.origin.y
-        
-        // Set clipping window to prevent icons from drawing outside screen bounds
-        u8g2_SetClipWindow(u8g2,
-                           u8g2_uint_t(max(0, absX)),
-                           u8g2_uint_t(max(0, absY)),
-                           u8g2_uint_t(absX + screenSize.width),
-                           u8g2_uint_t(absY + screenSize.height))
-        
-        // Check if initialization animation is complete
-        if !isInitialized {
-            let iconXTarget = Self.TILE_ICON_S
-            let titleYTarget = Self.titleYTargetCalc
-            if abs(iconX - iconXTarget) < 0.15 && abs(titleY - titleYTarget) < 0.15 {
-                isInitialized = true
-                // Reset icon X to final position
-                iconX = -Double(selectedIndex) * Self.TILE_ICON_S
-            }
-        }
-        
-        // Draw icons
-        // Reference code: (DISP_W - TILE_ICON_W) / 2 + (int16_t)tile.icon_x + i * TILE_ICON_S
-        // where tile.icon_x = - ui.select[ui.layer] * TILE_ICON_S after initialization
-        u8g2_SetDrawColor(u8g2, 1)
-        for (index, iconBits) in menuIcons.enumerated() {
-            let iconXPos: Double
-            if !isInitialized {
-                // Initial animation: icons slide in from center
-                // Reference: (DISP_W - TILE_ICON_W) / 2 + i * tile.icon_x - TILE_ICON_S * ui.select[ui.layer]
-                iconXPos = (screenSize.width - Self.TILE_ICON_W) / 2 + Double(index) * iconX - Self.TILE_ICON_S * Double(selectedIndex)
-            } else {
-                // Normal state: (DISP_W - TILE_ICON_W) / 2 + (int16_t)tile.icon_x + i * TILE_ICON_S
-                iconXPos = (screenSize.width - Self.TILE_ICON_W) / 2 + iconX + Double(index) * Self.TILE_ICON_S
-            }
-            
-            // Calculate icon position (may be negative, which is OK - clipping will handle it)
-            let iconDrawX = absX + iconXPos
-            let iconDrawY = absY
-            
-            // Only draw if icon is within or partially within screen bounds
-            // Icon is visible if its right edge is past screen left, and left edge is before screen right
-            let iconRightEdge = iconDrawX + Self.TILE_ICON_W
-            let iconLeftEdge = iconDrawX
-            let screenRight = absX + screenSize.width
-            let screenLeft = absX
-            
-            if iconRightEdge > screenLeft && iconLeftEdge < screenRight {
-                iconBits.withUnsafeBufferPointer { ptr in
-                    guard let baseAddress = ptr.baseAddress else { return }
-                    // Use bitPattern to allow negative coordinates (clipping window handles boundaries)
-                    // Clamp to Int16 range to avoid overflow
-                    let clampedX = max(Int16.min, min(Int16.max, Int16(iconDrawX)))
-                    let clampedY = max(Int16.min, min(Int16.max, Int16(iconDrawY)))
-                    u8g2_DrawXBM(u8g2,
-                                u8g2_uint_t(bitPattern: clampedX),
-                                u8g2_uint_t(bitPattern: clampedY),
-                                u8g2_uint_t(Self.TILE_ICON_W),
-                                u8g2_uint_t(Self.TILE_ICON_H),
-                                baseAddress)
-                }
-            }
-        }
-        
-        // Restore clipping window after drawing icons
-        u8g2_SetMaxClipWindow(u8g2)
-        
-        // Draw title indicator (left side bar)
-        u8g2_DrawBox(u8g2,
-                    u8g2_uint_t(max(0, min(absX, Double(UInt16.max)))),
-                    u8g2_uint_t(max(0, min(absY + Self.TILE_INDI_S, Double(UInt16.max)))),
-                    u8g2_uint_t(max(0, min(indiX, Double(UInt16.max)))),
-                    u8g2_uint_t(Self.TILE_INDI_H))
-        
-        // Draw title text
-        // Reference code: u8g2_font_helvB18_tr, TILE_B_TITLE_H = 18
-        // Position: ((DISP_W - TILE_INDI_W) - u8g2.getStrWidth(...)) / 2 + TILE_INDI_W
-        // Y position: TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H (baseline)
-        let titleText = menuItems[selectedIndex]
-        u8g2_SetFont(u8g2, u8g2_font_helvB18_tr)
-        
-        let textWidth = Double(u8g2_GetStrWidth(u8g2, titleText))
-        // Reference: ((DISP_W - TILE_INDI_W) - u8g2.getStrWidth(...)) / 2 + TILE_INDI_W
-        let textX = ((screenSize.width - Self.TILE_INDI_W) - textWidth) / 2 + Self.TILE_INDI_W
-        
-        // Y position: titleYTargetCalc is the baseline position
-        // Reference: TILE_INDI_S + (TILE_INDI_H - TILE_B_TITLE_H) / 2 + TILE_B_TITLE_H
-        let textBaselineY = absY + titleY
-        
-        u8g2_DrawStr(u8g2,
-                    u8g2_uint_t(max(0, min(absX + textX, Double(UInt16.max)))),
-                    u8g2_uint_t(max(0, min(textBaselineY, Double(UInt16.max)))),
-                    titleText)
     }
     
     override func handleInput(key: Int32) {
         // 'd' (100) -> Next
         if key == 100 {
-            if selectedIndex < menuItems.count - 1 {
-                selectedIndex += 1
-            }
+            tileMenu.moveNext()
         }
         
         // 'a' (97) -> Previous
         if key == 97 {
-            if selectedIndex > 0 {
-                selectedIndex -= 1
-            }
+            tileMenu.movePrevious()
         }
         
         // 'Enter' or 'e' (101) -> Select/Click
         if key == 101 {
-            handleSelection()
+            tileMenu.onSelect?(tileMenu.selectedIndex)
         }
     }
     
-    private func handleSelection() {
-        switch selectedIndex {
+    private func handleSelection(index: Int) {
+        switch index {
         case 0: // Sleep
             // TODO: Implement sleep functionality
             break
