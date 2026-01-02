@@ -85,11 +85,11 @@ public class Router {
     
     /// Dismisses the currently displayed modal.
     ///
-    /// If the modal is an `AlertView`, it will play its dismiss animation
+    /// If the modal is a `ModalView`, it will play its dismiss animation
     /// before being removed.
     public func dismissModal() {
-        if let alert = modal as? AlertView {
-            alert.dismiss {
+        if let modalView = modal as? ModalView {
+            modalView.dismiss {
                 self.modal = nil
             }
         } else {
@@ -138,9 +138,28 @@ public class Router {
     
     // MARK: - Input Handling
     
-    /// Dispatches input to the top page.
+    /// Dispatches input to modal first, then to the top page.
     /// - Parameter key: The key code of the pressed key.
     public func handleInput(key: Int32) {
+        // If there's a modal, handle input there first
+        if let modal = modal {
+            // 'q' (113) -> Close modal
+            if key == 113 {
+                dismissModal()
+                return
+            }
+            
+            // Let modal handle other input
+            if let progressView = modal as? ProgressView {
+                progressView.handleInput(key: key)
+                return
+            }
+            
+            // For other modals, return early (they handle their own input)
+            return
+        }
+        
+        // Otherwise, dispatch to the top page
         if let page = stack.last {
             page.handleInput(key: key)
         }

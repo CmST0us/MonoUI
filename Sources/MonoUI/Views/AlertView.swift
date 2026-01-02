@@ -6,29 +6,15 @@ import CU8g2
 ///
 /// `AlertView` appears with a slide-up animation from the bottom of the screen
 /// and can be dismissed with a slide-down animation.
-public class AlertView: View {
-    // MARK: - Public Properties
-    
-    /// The frame of the alert view.
-    public var frame: Rect
-    
-    /// Callback executed when the dismiss animation completes.
-    public var onAnimationCompleted: (() -> Void)?
-    
+/// It consists of an optional title text and a message text.
+public class AlertView: ModalView {
     // MARK: - Private Properties
-    
-    /// The vertical offset for slide animation.
-    /// Starts at screen height (below screen) and animates to `frame.origin.y`.
-    @AnimationValue private var offsetY: Double
     
     /// The message text to display.
     private var message: String
     
     /// The optional title text.
     private var title: String?
-    
-    /// Flag indicating if the alert is currently dismissing.
-    private var isDismissing: Bool = false
     
     // MARK: - Initialization
     
@@ -38,57 +24,19 @@ public class AlertView: View {
     ///   - title: Optional title text.
     ///   - message: The message text to display.
     public init(frame: Rect, title: String? = nil, message: String) {
-        // Initialize offsetY to screen height (below screen) as default
-        let screenHeight = Context.shared.screenSize.height
-        self._offsetY = AnimationValue(wrappedValue: screenHeight)
-        
-        self.frame = frame
         self.title = title
         self.message = message
-        
-        // Trigger slide-up animation
-        self.offsetY = frame.origin.y
-    }
-    
-    // MARK: - Public Methods
-    
-    /// Dismisses the alert with a slide-down animation.
-    /// - Parameter completion: Closure to execute when animation completes.
-    public func dismiss(completion: @escaping () -> Void) {
-        isDismissing = true
-        onAnimationCompleted = completion
-        let screenHeight = Context.shared.screenSize.height
-        offsetY = screenHeight // Animate off screen
+        super.init(frame: frame)
     }
     
     // MARK: - Drawing
     
-    /// Renders the alert view.
+    /// Draws the alert content (title and message).
     /// - Parameters:
     ///   - u8g2: Pointer to the u8g2 graphics context.
-    ///   - origin: The absolute origin of the parent.
-    public func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
-        guard let u8g2 = u8g2 else { return }
-        
-        // Check if dismiss animation is complete
-        let screenHeight = Context.shared.screenSize.height
-        if isDismissing && abs(offsetY - screenHeight) < 1.0 {
-            onAnimationCompleted?()
-            return
-        }
-        
-        let absX = origin.x + frame.origin.x
-        let absY = origin.y + offsetY
-        
-        // Draw alert box with rounded corners
-        u8g2_SetDrawColor(u8g2, 1)
-        u8g2_DrawRBox(u8g2, 
-                      u8g2_uint_t(absX), 
-                      u8g2_uint_t(absY), 
-                      u8g2_uint_t(frame.size.width), 
-                      u8g2_uint_t(frame.size.height), 
-                      3)
-        
+    ///   - absX: The absolute X coordinate of the modal.
+    ///   - absY: The absolute Y coordinate of the modal.
+    public override func drawContent(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double) {
         // Set inverse color for text
         u8g2_SetDrawColor(u8g2, 0)
         u8g2_SetFontMode(u8g2, 1)

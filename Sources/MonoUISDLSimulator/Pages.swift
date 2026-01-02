@@ -174,6 +174,14 @@ class HomePage: Page {
         if key == 101 {
             tileMenu.onSelect?(tileMenu.selectedIndex)
         }
+        
+        // 'p' (112) -> Show Progress View
+        if key == 112 {
+            if let app = Application.shared as? SDL2SimulatorApp {
+                let progressView = ProgressView(title: "Progress", value: 50, minimum: 0, maximum: 100, step: 5)
+                (app as Application).router.present(progressView)
+            }
+        }
     }
     
     private func handleSelection(index: Int) {
