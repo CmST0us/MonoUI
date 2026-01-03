@@ -4,36 +4,65 @@ import CU8g2
 
 /// A scrollable menu list with cursor navigation and highlighting.
 ///
-/// `ListMenu` manages a list of text items with cursor-based navigation:
-/// - Text items are directly laid out within the menu (no StackView)
+/// `ListMenu` manages a list of menu items with cursor-based navigation:
+/// - Uses `ItemMenuCell` and `ItemMenuCellModel` for data-driven rendering
 /// - Cursor position and size are animated
-/// - Text positions remain fixed when cursor moves
+/// - Item positions are animated from y=0 when menu appears
 /// - Cursor and text overlap areas are displayed with inverse colors
 ///
 /// Example:
 /// ```swift
 /// let menu = ListMenu(size: Size(width: 128, height: 64))
-/// menu.setItems(["Item 1", "Item 2", "Item 3"])
+/// menu.setItems(["Item 1", "Item 2", "Item 3"]) // Convenience method
+/// // Or use models directly:
+/// menu.models = [TextMenuCellModel(text: "Item 1"), ...]
 /// menu.selectedIndex = 0
 /// ```
 open class ListMenu: ScrollView {
     // MARK: - Public Properties
     
-    /// The list of text items to display.
-    public var items: [String] = [] {
+    /// The list of data models to display.
+    public var models: [ItemMenuCellModel] = [] {
         didSet {
+            // Initialize item Y positions with animation from y=0
+            itemYPositions = []
+            var currentY: Double = 0
+            for model in models {
+                let animValue = AnimationValue(wrappedValue: 0)
+                animValue.speed = itemAnimationSpeed
+                // Set current value to 0, then animate to target
+                animValue.setCurrentValue(0)
+                animValue.wrappedValue = currentY
+                itemYPositions.append(animValue)
+                currentY += model.cellHeight
+            }
+            
+            // Clear cell cache when models change
+            cellCache.removeAll()
+            
             updateContentSize()
-            if selectedIndex >= items.count {
-                selectedIndex = max(0, items.count - 1)
+            if selectedIndex >= models.count {
+                selectedIndex = max(0, models.count - 1)
             }
             updateCursorAnimation()
+        }
+    }
+    
+    /// The list of text items to display (convenience property).
+    /// Setting this automatically creates `TextMenuCellModel` instances.
+    public var items: [String] {
+        get {
+            return models.compactMap { $0 as? TextMenuCellModel }.map { $0.text }
+        }
+        set {
+            self.models = newValue.map { TextMenuCellModel(text: $0, cellHeight: lineHeight, font: font, textPadding: textPadding) }
         }
     }
     
     /// The currently selected item index.
     public var selectedIndex: Int = 0 {
         didSet {
-            let clampedIndex = max(0, min(selectedIndex, items.count - 1))
+            let clampedIndex = max(0, min(selectedIndex, models.count - 1))
             if clampedIndex != selectedIndex {
                 selectedIndex = clampedIndex
                 return
@@ -45,8 +74,12 @@ open class ListMenu: ScrollView {
     
     /// The number of items in the menu.
     public var itemCount: Int {
-        return items.count
+        return models.count
     }
+    
+    /// Cell class type to use for creating cells (default: TextMenuCell).
+    /// Subclasses can override this to use different cell types.
+    open var cellClass: ItemMenuCell.Type = TextMenuCell.self
     
     /// Font to use for text items (default: u8g2_font_6x10_tf).
     public var font: UnsafePointer<UInt8>? = u8g2_font_6x10_tf
@@ -63,6 +96,9 @@ open class ListMenu: ScrollView {
     /// Animation speed for scroll movement (default: 25.0).
     public var scrollAnimationSpeed: Double = 25.0
     
+    /// Animation speed for item appearance (default: 40.0).
+    public var itemAnimationSpeed: Double = 40.0
+    
     /// Corner radius for the selection box (default: 0.5).
     public var selectionCornerRadius: Double = 0.5
     
@@ -70,6 +106,9 @@ open class ListMenu: ScrollView {
     public var scrollBarWidth: Double = 5.0
     
     // MARK: - Private Properties
+    
+    /// Animated Y positions for each item in content coordinates.
+    private var itemYPositions: [AnimationValue<Double>] = []
     
     /// Animated cursor Y position in content coordinates.
     @AnimationValue private var cursorY: Double = 0
@@ -86,8 +125,11 @@ open class ListMenu: ScrollView {
     /// Animated scroll bar Y position.
     @AnimationValue private var scrollBarY: Double = 0
     
-    /// Cached text widths for each item.
+    /// Cached text widths for each item (for backward compatibility).
     private var textWidths: [Double] = []
+    
+    /// Cell cache for reuse (keyed by model identifier).
+    private var cellCache: [String: ItemMenuCell] = [:]
     
     // MARK: - Initialization
     
@@ -128,11 +170,29 @@ open class ListMenu: ScrollView {
     
     // MARK: - Public Methods
     
-    /// Sets the list items.
+    /// Sets the list items (convenience method).
     /// - Parameter items: Array of text strings to display.
     public func setItems(_ items: [String]) {
         self.items = items
         textWidths = []
+        // Item Y positions are initialized in models didSet
+    }
+    
+    /// Gets or creates a cell for the given model.
+    /// - Parameter model: The model to get a cell for.
+    /// - Returns: A cell instance configured with the model.
+    private func cellForModel(_ model: ItemMenuCellModel) -> ItemMenuCell {
+        // Try to reuse cell from cache
+        if let cachedCell = cellCache[model.identifier] {
+            cachedCell.prepareForReuse(with: model)
+            return cachedCell
+        }
+        
+        // Create new cell
+        let cell = cellClass.init()
+        cell.model = model
+        cellCache[model.identifier] = cell
+        return cell
     }
     
     /// Moves the cursor up by one item.
@@ -172,43 +232,45 @@ open class ListMenu: ScrollView {
                            u8g2_uint_t(absX + frame.size.width),
                            u8g2_uint_t(absY + frame.size.height))
         
-        // Set font
-        let fontToUse = font ?? u8g2_font_6x10_tf
-        u8g2_SetFont(u8g2, fontToUse)
-        
-        // Update text widths cache
-        updateTextWidthsCache(u8g2: u8g2)
-        
-        // Calculate font metrics
-        let fontAscent = Double(u8g2_GetAscent(u8g2))
-        
-        // Draw all text items except the selected one (normal color)
-        // The selected text will be drawn later with inverse color over the cursor
+        // Draw all cells except the selected one (normal color)
+        // The selected cell will be drawn later with inverse color over the cursor
         u8g2_SetDrawColor(u8g2, 1)
-        for (index, item) in items.enumerated() {
+        for (index, model) in models.enumerated() {
             // Skip selected item - it will be drawn with inverse color later
             if index == selectedIndex {
                 continue
             }
             
-            let itemY = Double(index) * lineHeight
+            // Use animated Y position for item
+            let itemY: Double
+            if index < itemYPositions.count {
+                itemY = itemYPositions[index].wrappedValue
+            } else {
+                // Fallback: calculate from previous items
+                var calculatedY: Double = 0
+                for i in 0..<index {
+                    calculatedY += models[i].cellHeight
+                }
+                itemY = calculatedY
+            }
+            
+            let itemHeight = model.cellHeight
             let itemScreenY = absY + itemY - contentOffset.y
             
             // Only draw if item is visible in viewport
-            if itemScreenY + lineHeight >= absY && itemScreenY <= absY + frame.size.height {
-                let textX = absX + textPadding
-                let textY = absY + itemY + textPadding + fontAscent - contentOffset.y
+            if itemScreenY + itemHeight >= absY && itemScreenY <= absY + frame.size.height {
+                // Get or create cell for this model
+                let cell = cellForModel(model)
+                cell.isSelected = false
+                cell.frame = Rect(x: 0, y: itemY, width: frame.size.width, height: itemHeight)
                 
-                // Draw text (normal color)
-                u8g2_DrawStr(u8g2,
-                            u8g2_uint_t(max(0, min(textX, Double(UInt16.max)))),
-                            u8g2_uint_t(max(0, min(textY, Double(UInt16.max)))),
-                            item)
+                // Draw cell
+                cell.draw(u8g2: u8g2, absX: absX, absY: absY + itemY - contentOffset.y, isSelected: false)
             }
         }
         
-        // Draw cursor (selection box) and selected text with inverse color
-        drawCursor(u8g2: u8g2, absX: absX, absY: absY, fontAscent: fontAscent)
+        // Draw cursor (selection box) and selected cell with inverse color
+        drawCursor(u8g2: u8g2, absX: absX, absY: absY)
         
         // Draw scroll progress bar on the right side
         drawScrollBar(u8g2: u8g2, absX: absX, absY: absY)
@@ -219,9 +281,9 @@ open class ListMenu: ScrollView {
     
     // MARK: - Private Methods
     
-    /// Draws the cursor (selection box) and selected text with inverse colors.
-    private func drawCursor(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double, fontAscent: Double) {
-        guard selectedIndex >= 0 && selectedIndex < items.count else { return }
+    /// Draws the cursor (selection box) and selected cell with inverse colors.
+    private func drawCursor(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double) {
+        guard selectedIndex >= 0 && selectedIndex < models.count else { return }
         
         // Calculate cursor position in screen coordinates
         let cursorContentY = cursorY
@@ -238,16 +300,31 @@ open class ListMenu: ScrollView {
                          u8g2_uint_t(max(0, min(cursorHeight, Double(UInt16.max)))),
                          u8g2_uint_t(selectionCornerRadius))
             
-            // Draw selected text in inverse color (over the selection box)
-            let selectedItem = items[selectedIndex]
-            let itemY = Double(selectedIndex) * lineHeight
-            let textX = absX + textPadding
-            let textY = absY + itemY + textPadding + fontAscent - contentOffset.y
+            // Draw selected cell in inverse color (over the selection box)
+            let selectedModel = models[selectedIndex]
+            // Use animated Y position for selected item
+            let itemY: Double
+            if selectedIndex < itemYPositions.count {
+                itemY = itemYPositions[selectedIndex].wrappedValue
+            } else {
+                // Fallback: calculate from previous items
+                var calculatedY: Double = 0
+                for i in 0..<selectedIndex {
+                    calculatedY += models[i].cellHeight
+                }
+                itemY = calculatedY
+            }
             
-            u8g2_DrawStr(u8g2,
-                        u8g2_uint_t(max(0, min(textX, Double(UInt16.max)))),
-                        u8g2_uint_t(max(0, min(textY, Double(UInt16.max)))),
-                        selectedItem)
+            let itemHeight = selectedModel.cellHeight
+            let itemScreenY = absY + itemY - contentOffset.y
+            
+            // Get or create cell for selected model
+            let cell = cellForModel(selectedModel)
+            cell.isSelected = true
+            cell.frame = Rect(x: 0, y: itemY, width: frame.size.width, height: itemHeight)
+            
+            // Draw selected cell
+            cell.draw(u8g2: u8g2, absX: absX, absY: itemScreenY, isSelected: true)
             
             // Restore draw color
             u8g2_SetDrawColor(u8g2, 1)
@@ -256,21 +333,32 @@ open class ListMenu: ScrollView {
     
     /// Updates the cursor animation targets based on the selected item.
     private func updateCursorAnimation() {
-        guard selectedIndex >= 0 && selectedIndex < items.count else { return }
+        guard selectedIndex >= 0 && selectedIndex < models.count else { return }
         
         // Calculate target cursor position (Y position)
-        let targetY = Double(selectedIndex) * lineHeight
-        let targetHeight = lineHeight
+        var targetY: Double = 0
+        for i in 0..<selectedIndex {
+            targetY += models[i].cellHeight
+        }
         
-        // Calculate target cursor width (text width + padding on both sides)
-        // We need to measure the text width, but we'll do it during draw
-        // For now, use a reasonable default or cached value
+        let selectedModel = models[selectedIndex]
+        let targetHeight = selectedModel.cellHeight
+        
+        // Calculate target cursor width
+        // For TextMenuCellModel, use cached text width if available
         let targetWidth: Double
-        if selectedIndex < textWidths.count {
-            targetWidth = textWidths[selectedIndex] + textPadding * 2
+        if let textModel = selectedModel as? TextMenuCellModel {
+            if selectedIndex < textWidths.count {
+                targetWidth = textWidths[selectedIndex] + textModel.textPadding * 2
+            } else {
+                // Default width, will be updated when we measure the text
+                targetWidth = frame.size.width
+            }
         } else {
-            // Default width, will be updated when we measure the text
-            targetWidth = frame.size.width
+            // For other cell types, use cell's ideal size
+            let cell = cellForModel(selectedModel)
+            let idealSize = cell.idealSize(u8g2: nil)
+            targetWidth = min(idealSize.width, frame.size.width)
         }
         
         // Update animation targets
@@ -292,11 +380,14 @@ open class ListMenu: ScrollView {
     
     /// Updates the scroll offset to keep the cursor visible.
     private func updateScrollForCursor() {
-        guard selectedIndex >= 0 && selectedIndex < items.count else { return }
+        guard selectedIndex >= 0 && selectedIndex < models.count else { return }
         
         // Calculate item position in content coordinates
-        let itemY = Double(selectedIndex) * lineHeight
-        let itemHeight = lineHeight
+        var itemY: Double = 0
+        for i in 0..<selectedIndex {
+            itemY += models[i].cellHeight
+        }
+        let itemHeight = models[selectedIndex].cellHeight
         
         // Calculate item position relative to viewport
         let itemTopInViewport = itemY - animatedScrollOffset
@@ -323,19 +414,19 @@ open class ListMenu: ScrollView {
     
     /// Updates the scroll bar position based on the selected index.
     private func updateScrollBarPosition() {
-        guard items.count > 1 else {
+        guard models.count > 1 else {
             scrollBarY = 0
             return
         }
         
         // Calculate scroll bar position: map selected index to viewport height
-        let scrollBarTargetY = Double(selectedIndex) * (frame.size.height / Double(items.count - 1))
+        let scrollBarTargetY = Double(selectedIndex) * (frame.size.height / Double(models.count - 1))
         scrollBarY = scrollBarTargetY
     }
     
     /// Draws the scroll progress bar on the right side.
     private func drawScrollBar(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double) {
-        guard items.count > 1 else { return }
+        guard models.count > 1 else { return }
         
         // Calculate scroll bar position
         let barX = absX + frame.size.width - scrollBarWidth
@@ -373,30 +464,35 @@ open class ListMenu: ScrollView {
         }
     }
     
-    /// Updates the content size based on the items.
+    /// Updates the content size based on the models.
     private func updateContentSize() {
-        let totalHeight = Double(items.count) * lineHeight
+        let totalHeight = models.reduce(0.0) { $0 + $1.cellHeight }
         contentSize = Size(width: frame.size.width, height: totalHeight)
         
         // Update cursor animation after content size update
-        if selectedIndex < items.count {
+        if selectedIndex < models.count {
             updateCursorAnimation()
         }
     }
     
     /// Updates text widths cache when drawing (called during draw).
+    /// This is for backward compatibility with TextMenuCellModel.
     private func updateTextWidthsCache(u8g2: UnsafeMutablePointer<u8g2_t>?) {
-        guard let u8g2 = u8g2, textWidths.count != items.count else { return }
+        guard let u8g2 = u8g2 else { return }
         
-        let fontToUse = font ?? u8g2_font_6x10_tf
-        u8g2_SetFont(u8g2, fontToUse)
-        
-        textWidths = items.map { Double(u8g2_GetStrWidth(u8g2, $0)) }
-        
-        // Update cursor width if selected item width changed
-        if selectedIndex < textWidths.count {
-            let targetWidth = textWidths[selectedIndex] + textPadding * 2
-            cursorWidth = targetWidth
+        // Only update cache for TextMenuCellModel items
+        let textModels = models.compactMap { $0 as? TextMenuCellModel }
+        if textModels.count == models.count && textWidths.count != textModels.count {
+            let fontToUse = font ?? u8g2_font_6x10_tf
+            u8g2_SetFont(u8g2, fontToUse)
+            
+            textWidths = textModels.map { Double(u8g2_GetStrWidth(u8g2, $0.text)) }
+            
+            // Update cursor width if selected item width changed
+            if selectedIndex < textWidths.count, let textModel = models[selectedIndex] as? TextMenuCellModel {
+                let targetWidth = textWidths[selectedIndex] + textModel.textPadding * 2
+                cursorWidth = targetWidth
+            }
         }
     }
 }
