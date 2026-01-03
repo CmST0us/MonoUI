@@ -27,6 +27,8 @@ public class AlertView: ModalView {
         self.title = title
         self.message = message
         super.init(frame: frame)
+        // Set inverse color mode for highlighted display
+        self.colorMode = .inverse
     }
     
     // MARK: - Drawing

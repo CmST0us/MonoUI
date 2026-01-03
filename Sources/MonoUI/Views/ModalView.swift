@@ -2,6 +2,14 @@ import CU8g2
 
 // MARK: - ModalView
 
+/// Color mode for modal view display.
+public enum ModalColorMode: UInt8 {
+    /// Normal color mode (black background, white border).
+    case normal = 0
+    /// Inverse color mode (white background, black border).
+    case inverse = 1
+}
+
 /// Base class for modal views that appear with slide animations.
 ///
 /// `ModalView` provides common functionality for modal dialogs including:
@@ -33,6 +41,9 @@ open class ModalView: View {
             _offsetY.speed = animationSpeed
         }
     }
+    
+    /// Color mode for the modal view display (default: .normal).q
+    public var colorMode: ModalColorMode = .normal
     
     // MARK: - Protected Properties
     
@@ -92,7 +103,7 @@ open class ModalView: View {
         let absY = origin.y + offsetY
         
         // Draw window background with rounded corners
-        u8g2_SetDrawColor(u8g2, 0)
+        u8g2_SetDrawColor(u8g2, colorMode.rawValue)
         u8g2_DrawRBox(u8g2,
                      u8g2_uint_t(absX),
                      u8g2_uint_t(absY),
@@ -101,7 +112,7 @@ open class ModalView: View {
                      u8g2_uint_t(cornerRadius))
         
         // Draw window border
-        u8g2_SetDrawColor(u8g2, 1)
+        u8g2_SetDrawColor(u8g2, colorMode.rawValue)
         u8g2_DrawRFrame(u8g2,
                        u8g2_uint_t(absX),
                        u8g2_uint_t(absY),
