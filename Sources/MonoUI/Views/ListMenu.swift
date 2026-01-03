@@ -4,7 +4,8 @@ import CU8g2
 
 /// A scrollable menu list with cursor navigation and highlighting.
 ///
-/// `ListMenu` manages a list of text items with cursor-based navigation:
+/// `ListMenu` manages a list of menu items with cursor-based navigation:
+/// - Supports different types of items: text, toggle, radio, checkbox, value, header, separator
 /// - Text items are directly laid out within the menu (no StackView)
 /// - Cursor position and size are animated
 /// - Text positions remain fixed when cursor moves
@@ -16,17 +17,37 @@ import CU8g2
 /// menu.setItems(["Item 1", "Item 2", "Item 3"])
 /// menu.selectedIndex = 0
 /// ```
+///
+/// Example with different item types:
+/// ```swift
+/// let toggle = ToggleMenuItem("Enable Feature", isOn: false)
+/// let radio = RadioMenuItem("Option 1", value: 1, selectedValue: &selectedValue)
+/// menu.setMenuItems([toggle, radio])
+/// ```
 open class ListMenu: ScrollView {
     // MARK: - Public Properties
     
-    /// The list of text items to display.
-    public var items: [String] = [] {
+    /// The list of menu items to display.
+    public var menuItems: [ListMenuItem] = [] {
         didSet {
             updateContentSize()
-            if selectedIndex >= items.count {
-                selectedIndex = max(0, items.count - 1)
+            if selectedIndex >= menuItems.count {
+                selectedIndex = max(0, menuItems.count - 1)
             }
             updateCursorAnimation()
+            // Update text widths cache
+            textWidths = []
+        }
+    }
+    
+    /// The list of text items to display (backward compatibility).
+    /// Setting this will convert strings to TextMenuItem instances.
+    public var items: [String] {
+        get {
+            return menuItems.map { $0.text }
+        }
+        set {
+            menuItems = newValue.map { TextMenuItem($0) }
         }
     }
     
@@ -45,7 +66,7 @@ open class ListMenu: ScrollView {
     
     /// The number of items in the menu.
     public var itemCount: Int {
-        return items.count
+        return menuItems.count
     }
     
     /// Font to use for text items (default: u8g2_font_6x10_tf).
@@ -144,9 +165,25 @@ open class ListMenu: ScrollView {
     
     /// Moves the cursor down by one item.
     public func moveDown() {
-        if selectedIndex < items.count - 1 {
+        if selectedIndex < menuItems.count - 1 {
             selectedIndex += 1
         }
+    }
+    
+    /// Handles selection/activation of the currently selected item.
+    /// - Returns: True if the item handled the selection, false otherwise.
+    @discardableResult
+    public func handleSelection() -> Bool {
+        guard selectedIndex >= 0 && selectedIndex < menuItems.count else { return false }
+        
+        let item = menuItems[selectedIndex]
+        
+        // Skip non-selectable items
+        if item.itemType == .header || item.itemType == .separator {
+            return false
+        }
+        
+        return item.handleSelection()
     }
     
     // MARK: - Drawing
@@ -182,10 +219,10 @@ open class ListMenu: ScrollView {
         // Calculate font metrics
         let fontAscent = Double(u8g2_GetAscent(u8g2))
         
-        // Draw all text items except the selected one (normal color)
-        // The selected text will be drawn later with inverse color over the cursor
+        // Draw all menu items except the selected one (normal color)
+        // The selected item will be drawn later with inverse color over the cursor
         u8g2_SetDrawColor(u8g2, 1)
-        for (index, item) in items.enumerated() {
+        for (index, item) in menuItems.enumerated() {
             // Skip selected item - it will be drawn with inverse color later
             if index == selectedIndex {
                 continue
@@ -194,8 +231,11 @@ open class ListMenu: ScrollView {
             let itemY = Double(index) * lineHeight
             let itemScreenY = absY + itemY - contentOffset.y
             
-            // Only draw if item is visible in viewport
-            if itemScreenY + lineHeight >= absY && itemScreenY <= absY + frame.size.height {
+            // Only draw if item is visible in viewport (at least partially visible)
+            // Item is visible if its bottom is below viewport top AND its top is above viewport bottom
+            let isVisible = itemScreenY + lineHeight > absY && itemScreenY < absY + frame.size.height
+            
+            if isVisible {
                 let textX = absX + textPadding
                 let textY = absY + itemY + textPadding + fontAscent - contentOffset.y
                 
@@ -203,7 +243,10 @@ open class ListMenu: ScrollView {
                 u8g2_DrawStr(u8g2,
                             u8g2_uint_t(max(0, min(textX, Double(UInt16.max)))),
                             u8g2_uint_t(max(0, min(textY, Double(UInt16.max)))),
-                            item)
+                            item.text)
+                
+                // Draw additional content (checkbox, toggle, etc.)
+                item.drawAdditionalContent(u8g2: u8g2, x: absX, y: itemScreenY, lineHeight: lineHeight, isSelected: false)
             }
         }
         
@@ -221,7 +264,14 @@ open class ListMenu: ScrollView {
     
     /// Draws the cursor (selection box) and selected text with inverse colors.
     private func drawCursor(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double, fontAscent: Double) {
-        guard selectedIndex >= 0 && selectedIndex < items.count else { return }
+        guard selectedIndex >= 0 && selectedIndex < menuItems.count else { return }
+        
+        let selectedItem = menuItems[selectedIndex]
+        
+        // Skip drawing cursor for non-selectable items
+        if selectedItem.itemType == .header || selectedItem.itemType == .separator {
+            return
+        }
         
         // Calculate cursor position in screen coordinates
         let cursorContentY = cursorY
@@ -239,15 +289,21 @@ open class ListMenu: ScrollView {
                          u8g2_uint_t(selectionCornerRadius))
             
             // Draw selected text in inverse color (over the selection box)
-            let selectedItem = items[selectedIndex]
             let itemY = Double(selectedIndex) * lineHeight
+            let itemScreenY = absY + itemY - contentOffset.y
             let textX = absX + textPadding
             let textY = absY + itemY + textPadding + fontAscent - contentOffset.y
             
             u8g2_DrawStr(u8g2,
                         u8g2_uint_t(max(0, min(textX, Double(UInt16.max)))),
                         u8g2_uint_t(max(0, min(textY, Double(UInt16.max)))),
-                        selectedItem)
+                        selectedItem.text)
+            
+            // Draw additional content for selected item (checkbox, toggle, etc.)
+            // Use fixed itemScreenY (not cursorScreenY) so the content doesn't move with cursor animation
+            // Note: We need to draw this with inverse color since it's over the inverse background
+            u8g2_SetDrawColor(u8g2, 2) // Use inverse color for content over inverse background
+            selectedItem.drawAdditionalContent(u8g2: u8g2, x: absX, y: itemScreenY, lineHeight: lineHeight, isSelected: true)
             
             // Restore draw color
             u8g2_SetDrawColor(u8g2, 1)
@@ -256,7 +312,14 @@ open class ListMenu: ScrollView {
     
     /// Updates the cursor animation targets based on the selected item.
     private func updateCursorAnimation() {
-        guard selectedIndex >= 0 && selectedIndex < items.count else { return }
+        guard selectedIndex >= 0 && selectedIndex < menuItems.count else { return }
+        
+        let selectedItem = menuItems[selectedIndex]
+        
+        // Skip cursor animation for non-selectable items
+        if selectedItem.itemType == .header || selectedItem.itemType == .separator {
+            return
+        }
         
         // Calculate target cursor position (Y position)
         let targetY = Double(selectedIndex) * lineHeight
@@ -292,7 +355,7 @@ open class ListMenu: ScrollView {
     
     /// Updates the scroll offset to keep the cursor visible.
     private func updateScrollForCursor() {
-        guard selectedIndex >= 0 && selectedIndex < items.count else { return }
+        guard selectedIndex >= 0 && selectedIndex < menuItems.count else { return }
         
         // Calculate item position in content coordinates
         let itemY = Double(selectedIndex) * lineHeight
@@ -323,19 +386,19 @@ open class ListMenu: ScrollView {
     
     /// Updates the scroll bar position based on the selected index.
     private func updateScrollBarPosition() {
-        guard items.count > 1 else {
+        guard menuItems.count > 1 else {
             scrollBarY = 0
             return
         }
         
         // Calculate scroll bar position: map selected index to viewport height
-        let scrollBarTargetY = Double(selectedIndex) * (frame.size.height / Double(items.count - 1))
+        let scrollBarTargetY = Double(selectedIndex) * (frame.size.height / Double(menuItems.count - 1))
         scrollBarY = scrollBarTargetY
     }
     
     /// Draws the scroll progress bar on the right side.
     private func drawScrollBar(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double) {
-        guard items.count > 1 else { return }
+        guard menuItems.count > 1 else { return }
         
         // Calculate scroll bar position
         let barX = absX + frame.size.width - scrollBarWidth
@@ -375,28 +438,34 @@ open class ListMenu: ScrollView {
     
     /// Updates the content size based on the items.
     private func updateContentSize() {
-        let totalHeight = Double(items.count) * lineHeight
+        let totalHeight = Double(menuItems.count) * lineHeight
         contentSize = Size(width: frame.size.width, height: totalHeight)
         
         // Update cursor animation after content size update
-        if selectedIndex < items.count {
+        if selectedIndex < menuItems.count {
             updateCursorAnimation()
         }
     }
     
     /// Updates text widths cache when drawing (called during draw).
     private func updateTextWidthsCache(u8g2: UnsafeMutablePointer<u8g2_t>?) {
-        guard let u8g2 = u8g2, textWidths.count != items.count else { return }
+        guard let u8g2 = u8g2, textWidths.count != menuItems.count else { return }
         
         let fontToUse = font ?? u8g2_font_6x10_tf
         u8g2_SetFont(u8g2, fontToUse)
         
-        textWidths = items.map { Double(u8g2_GetStrWidth(u8g2, $0)) }
+        textWidths = menuItems.map { Double(u8g2_GetStrWidth(u8g2, $0.text)) }
         
         // Update cursor width if selected item width changed
         if selectedIndex < textWidths.count {
             let targetWidth = textWidths[selectedIndex] + textPadding * 2
             cursorWidth = targetWidth
         }
+    }
+    
+    /// Sets the menu items directly.
+    /// - Parameter items: Array of ListMenuItem instances.
+    public func setMenuItems(_ items: [ListMenuItem]) {
+        self.menuItems = items
     }
 }

@@ -272,14 +272,24 @@ class TextIconTestPage: Page {
 
 // MARK: - ScrollViewTestPage
 
-/// Test page for ScrollView containing StackView with Text list.
+/// Test page for ScrollView containing different types of menu items.
 class ScrollViewTestPage: Page {
     @AnimationValue var offsetX: Double
     let listMenu: ListMenu
     
+    // State variables for menu items
+    private var toggleState = false
+    private var radioValueHolder: RadioValueHolder
+    private var checkboxStatesHolder: CheckboxStatesHolder
+    private var brightnessValue = 50
+    
     init() {
         let screenSize = Context.shared.screenSize
         self._offsetX = AnimationValue(wrappedValue: screenSize.width)
+        
+        // Initialize state holders
+        self.radioValueHolder = RadioValueHolder(1)
+        self.checkboxStatesHolder = CheckboxStatesHolder([false, false, false])
         
         // Create a ListMenu
         self.listMenu = ListMenu(size: Size(width: screenSize.width, height: screenSize.height),
@@ -287,25 +297,95 @@ class ScrollViewTestPage: Page {
         
         super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
         
-        // Set list items (text strings)
-        let texts = [
-            "Item 1: First",
-            "Item 2: Second",
-            "Item 3: Third",
-            "Item 4: Fourth",
-            "Item 5: Fifth",
-            "Item 6: Sixth",
-            "Item 7: Seventh",
-            "Item 8: Eighth",
-            "Item 9: Ninth",
-            "Item 10: Tenth"
-        ]
+        // Create different types of menu items
+        let header = HeaderMenuItem("[ Menu Test ]")
         
-        // Set items in ListMenu (no StackView needed)
-        listMenu.setItems(texts)
+        let separator1 = SeparatorMenuItem()
         
-        // Initialize cursor to first item
-        listMenu.selectedIndex = 0
+        // Toggle items
+        let toggle1 = ToggleMenuItem("Enable Feature", isOn: false) { [weak self] isOn in
+            self?.toggleState = isOn
+            print("Toggle changed to: \(isOn)")
+        }
+        
+        let toggle2 = ToggleMenuItem("Dark Mode", isOn: true) { isOn in
+            print("Dark Mode: \(isOn)")
+        }
+        
+        let separator2 = SeparatorMenuItem()
+        
+        // Radio button items (single selection group)
+        let radio1 = RadioMenuItem("Option 1", value: 1, selectedValueHolder: radioValueHolder, position: 0) { value in
+            print("Radio selected: \(value)")
+        }
+        
+        let radio2 = RadioMenuItem("Option 2", value: 2, selectedValueHolder: radioValueHolder, position: 1) { value in
+            print("Radio selected: \(value)")
+        }
+        
+        let radio3 = RadioMenuItem("Option 3", value: 3, selectedValueHolder: radioValueHolder, position: 2) { value in
+            print("Radio selected: \(value)")
+        }
+        
+        let separator3 = SeparatorMenuItem()
+        
+        // Checkbox items (multiple selection group)
+        let checkbox1 = CheckboxMenuItem("Check 1", index: 0, checkboxStatesHolder: checkboxStatesHolder) { index, isChecked in
+            print("Checkbox \(index) changed to: \(isChecked)")
+        }
+        
+        let checkbox2 = CheckboxMenuItem("Check 2", index: 1, checkboxStatesHolder: checkboxStatesHolder) { index, isChecked in
+            print("Checkbox \(index) changed to: \(isChecked)")
+        }
+        
+        let checkbox3 = CheckboxMenuItem("Check 3", index: 2, checkboxStatesHolder: checkboxStatesHolder) { index, isChecked in
+            print("Checkbox \(index) changed to: \(isChecked)")
+        }
+        
+        let separator4 = SeparatorMenuItem()
+        
+        // Value display items
+        let value1 = ValueMenuItem("Brightness", value: brightnessValue) { [weak self] value in
+            self?.brightnessValue = value
+            print("Brightness: \(value)")
+        }
+        
+        let value2 = ValueMenuItem("Volume", value: 75) { value in
+            print("Volume: \(value)")
+        }
+        
+        let separator5 = SeparatorMenuItem()
+        
+        // Plain text items
+        let text1 = TextMenuItem("Plain Text Item 1")
+        let text2 = TextMenuItem("Plain Text Item 2")
+        let text3 = TextMenuItem("Plain Text Item 3")
+        
+        // Set menu items
+        listMenu.setMenuItems([
+            header,
+            separator1,
+            toggle1,
+            toggle2,
+            separator2,
+            radio1,
+            radio2,
+            radio3,
+            separator3,
+            checkbox1,
+            checkbox2,
+            checkbox3,
+            separator4,
+            value1,
+            value2,
+            separator5,
+            text1,
+            text2,
+            text3
+        ])
+        
+        // Initialize cursor to first selectable item (skip header and separator)
+        listMenu.selectedIndex = 2
         
         // Add ListMenu to page
         addSubview(listMenu)
@@ -333,12 +413,17 @@ class ScrollViewTestPage: Page {
     override func handleInput(key: Int32) {
         // 'w' (119) -> Move cursor up
         if key == 119 {
-            listMenu.moveUp()
+            moveToNextSelectableItem(direction: -1)
         }
         
         // 's' (115) -> Move cursor down
         if key == 115 {
-            listMenu.moveDown()
+            moveToNextSelectableItem(direction: 1)
+        }
+        
+        // 'Enter' or 'e' (101) -> Select/Activate item
+        if key == 101 {
+            listMenu.handleSelection()
         }
         
         // 'q' (113) -> Back
@@ -352,6 +437,44 @@ class ScrollViewTestPage: Page {
                 }
             }
         }
+    }
+    
+    /// Moves to the next selectable item, skipping headers and separators.
+    private func moveToNextSelectableItem(direction: Int) {
+        guard listMenu.itemCount > 0 else { return }
+        
+        var currentIndex = listMenu.selectedIndex
+        let maxIndex = listMenu.itemCount - 1
+        let startIndex = currentIndex
+        
+        // Find next selectable item
+        repeat {
+            currentIndex += direction
+            
+            // Check bounds
+            if currentIndex < 0 {
+                // Reached top, try wrapping to bottom
+                currentIndex = maxIndex
+            } else if currentIndex > maxIndex {
+                // Reached bottom, try wrapping to top
+                currentIndex = 0
+            }
+            
+            // Check if current item is selectable
+            if currentIndex >= 0 && currentIndex <= maxIndex {
+                let item = listMenu.menuItems[currentIndex]
+                if item.itemType != .header && item.itemType != .separator {
+                    // Found a selectable item
+                    listMenu.selectedIndex = currentIndex
+                    return
+                }
+            }
+            
+            // Prevent infinite loop if all items are non-selectable
+            if currentIndex == startIndex {
+                break
+            }
+        } while currentIndex != startIndex
     }
 }
 
