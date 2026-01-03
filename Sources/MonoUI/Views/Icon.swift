@@ -10,12 +10,14 @@ import Darwin
 /// A view that displays an icon bitmap.
 ///
 /// `Icon` is similar to SwiftUI's image views, focusing on content rather than position.
-/// Position and layout are managed by parent views like `StackView`.
+/// Position and layout are managed by parent views like `HStack` or `VStack`.
 ///
 /// Example:
 /// ```swift
-/// let icon = Icon(iconBits: iconData, iconSize: Size(width: 16, height: 16))
-/// stackView.addSubview(icon)  // Position is managed by StackView
+/// HStack {
+///     Icon(iconBits: iconData, iconSize: Size(width: 16, height: 16))
+///     Text("Label")
+/// }
 /// ```
 public class Icon: View {
     // MARK: - Public Properties
@@ -54,7 +56,7 @@ public class Icon: View {
     
     /// Initializes a new icon view with the specified icon data.
     /// This is the primary initializer, similar to SwiftUI's `Image`.
-    /// Position is managed by parent views (e.g., StackView).
+    /// Position is managed by parent views (e.g., HStack or VStack).
     /// - Parameters:
     ///   - iconBits: The icon bitmap data in XBM format.
     ///   - iconSize: The size of the icon in pixels.
@@ -69,7 +71,7 @@ public class Icon: View {
     
     /// Initializes a new icon view with a fixed frame.
     /// Use this only when you need to manually position the icon.
-    /// For most cases, use `Icon(iconBits:iconSize:)` and let StackView manage positioning.
+    /// For most cases, use `Icon(iconBits:iconSize:)` and let HStack or VStack manage positioning.
     /// - Parameters:
     ///   - frame: The frame of the icon view.
     ///   - iconBits: The icon bitmap data in XBM format.

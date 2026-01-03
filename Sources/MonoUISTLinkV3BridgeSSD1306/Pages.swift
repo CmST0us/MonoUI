@@ -51,7 +51,7 @@ class DetailPage: Page {
     override func handleInput(key: Int32) {
         // GPIO mapping: key 1 -> Back
         if key == 1 {
-            if let app = Application.shared as? STLinkV3BridgeSSD1306App {
+            if let app = Application.shared {
                 if app.router.modal != nil {
                     app.router.dismissModal()
                 } else {
@@ -62,7 +62,7 @@ class DetailPage: Page {
         
         // GPIO mapping: key 2 -> Show Alert
         if key == 2 {
-            if let app = Application.shared as? STLinkV3BridgeSSD1306App {
+            if let app = Application.shared {
                 let alert = AlertView(frame: Rect(x: 14, y: 12, width: 100, height: 40), 
                                       title: "Info", 
                                       message: "Hello World")
@@ -104,34 +104,40 @@ class HomePage: Page {
         let tile1 = IconTileView(frame: Rect(x: startX, y: yPos, width: cardSize.width, height: cardSize.height),
                                  iconBits: Self.icon1,
                                  iconSize: Size(width: 17, height: 16)) {
-            if let app = Application.shared as? STLinkV3BridgeSSD1306App {
+            if let app = Application.shared {
                 app.router.push(DetailPage(title: "Music"))
             }
         }
-        scrollView.addSubview(tile1)
         tiles.append(tile1)
         
         let tile2 = IconTileView(frame: Rect(x: startX + cardSize.width + spacing, y: yPos, width: cardSize.width, height: cardSize.height),
                                  iconBits: Self.icon2,
                                  iconSize: Size(width: 15, height: 16)) {
-            if let app = Application.shared as? STLinkV3BridgeSSD1306App {
+            if let app = Application.shared {
                 app.router.push(DetailPage(title: "Home"))
             }
         }
-        scrollView.addSubview(tile2)
         tiles.append(tile2)
         
         let tile3 = IconTileView(frame: Rect(x: startX + (cardSize.width + spacing) * 2, y: yPos, width: cardSize.width, height: cardSize.height),
                                  iconBits: Self.icon3,
                                  iconSize: Size(width: 14, height: 16)) {
-            if let app = Application.shared as? STLinkV3BridgeSSD1306App {
+            if let app = Application.shared {
                 app.router.push(DetailPage(title: "Download"))
             }
         }
-        scrollView.addSubview(tile3)
         tiles.append(tile3)
         
-        self.addSubview(scrollView)
+        // Add tiles to scrollView and scrollView to page using ViewBuilder
+        scrollView.addSubview {
+            tile1
+            tile2
+            tile3
+        }
+        
+        self.addSubview {
+            scrollView
+        }
     }
     
     override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {

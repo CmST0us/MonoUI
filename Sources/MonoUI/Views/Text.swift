@@ -5,12 +5,14 @@ import CU8g2
 /// A view that displays text on the screen.
 ///
 /// `Text` is similar to SwiftUI's `Text`, focusing on content rather than position.
-/// Position and layout are managed by parent views like `StackView`.
+/// Position and layout are managed by parent views like `HStack` or `VStack`.
 ///
 /// Example:
 /// ```swift
-/// let text = Text("Hello World")
-/// stackView.addSubview(text)  // Position is managed by StackView
+/// HStack {
+///     Text("Hello")
+///     Text("World")
+/// }
 /// ```
 public class Text: View {
     // MARK: - Public Properties
@@ -67,7 +69,7 @@ public class Text: View {
     
     /// Initializes a new text view with the specified text.
     /// This is the primary initializer, similar to SwiftUI's `Text("Hello")`.
-    /// Position is managed by parent views (e.g., StackView).
+    /// Position is managed by parent views (e.g., HStack or VStack).
     /// - Parameters:
     ///   - text: The text string to display.
     ///   - font: Optional font to use. If nil, uses default font.
@@ -106,7 +108,7 @@ public class Text: View {
     
     /// Initializes a new text view with a fixed frame.
     /// Use this only when you need to manually position the text.
-    /// For most cases, use `Text(_:)` and let StackView manage positioning.
+    /// For most cases, use `Text(_:)` and let HStack or VStack manage positioning.
     /// - Parameters:
     ///   - frame: The frame of the text view.
     ///   - text: The text string to display.
@@ -200,7 +202,7 @@ public class Text: View {
     // MARK: - Public Methods
     
     /// Calculates the ideal size for the text content.
-    /// This is used by layout systems like StackView to determine the text's natural size.
+    /// This is used by layout systems like HStack or VStack to determine the text's natural size.
     /// - Parameter u8g2: Optional u8g2 context for accurate measurement. If nil, uses estimation.
     /// - Returns: The ideal size for the text.
     public func idealSize(u8g2: UnsafeMutablePointer<u8g2_t>? = nil) -> Size {

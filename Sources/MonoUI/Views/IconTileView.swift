@@ -11,7 +11,7 @@ import Darwin
 ///
 /// `IconTileView` is typically used to represent selectable items in a grid or list,
 /// such as menu items or app icons.
-/// Position can be managed by parent views like `StackView`.
+/// Position can be managed by parent views like `HStack` or `VStack`.
 public class IconTileView: View {
     // MARK: - Public Properties
     
@@ -35,7 +35,7 @@ public class IconTileView: View {
     // MARK: - Initialization
     
     /// Initializes a new icon tile view with specified size.
-    /// Position is managed by parent views (e.g., StackView).
+    /// Position is managed by parent views (e.g., HStack or VStack).
     /// - Parameters:
     ///   - size: The size of the tile (default: 36x36).
     ///   - iconBits: Optional icon bitmap data in XBM format.

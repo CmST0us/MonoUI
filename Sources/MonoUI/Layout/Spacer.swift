@@ -9,11 +9,12 @@ import CU8g2
 ///
 /// Example:
 /// ```swift
-/// let stack = StackView(frame: rect, axis: .horizontal)
-/// stack.addSubview(textView1)
-/// stack.addSubview(Spacer())
-/// stack.addSubview(textView2)
-/// // textView1 and textView2 will be pushed to opposite ends
+/// HStack {
+///     Text("Left")
+///     Spacer()
+///     Text("Right")
+/// }
+/// // Text views will be pushed to opposite ends
 /// ```
 public class Spacer: View {
     // MARK: - Public Properties

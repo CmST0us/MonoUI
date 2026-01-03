@@ -20,7 +20,7 @@ public enum ScrollDirection {
 ///
 /// `ScrollView` manages a collection of child views and renders only the portion
 /// that is visible within its frame. Content can be scrolled by modifying the `contentOffset`.
-/// Position can be managed by parent views like `StackView`.
+/// Position can be managed by parent views like `HStack` or `VStack`.
 open class ScrollView: View {
     // MARK: - Public Properties
     
@@ -44,7 +44,7 @@ open class ScrollView: View {
     // MARK: - Initialization
     
     /// Initializes a new scroll view with the specified size.
-    /// Position is managed by parent views (e.g., StackView).
+    /// Position is managed by parent views (e.g., HStack or VStack).
     /// - Parameters:
     ///   - size: The size of the scroll view viewport.
     ///   - direction: The scrolling direction (default: .vertical).
@@ -64,10 +64,12 @@ open class ScrollView: View {
     
     // MARK: - Public Methods
     
-    /// Adds a child view to the scroll view.
-    /// - Parameter view: The view to add.
-    public func addSubview(_ view: View) {
-        children.append(view)
+    /// Adds views built with ViewBuilder to the scroll view.
+    /// - Parameter content: The view builder content.
+    public func addSubview<Content: View>(@ViewBuilder content: () -> Content) {
+        let contentView = content()
+        let extractedChildren = ViewExtractionHelper.extractChildren(from: contentView)
+        children.append(contentsOf: extractedChildren)
     }
     
     // MARK: - Drawing

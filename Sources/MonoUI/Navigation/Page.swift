@@ -23,12 +23,25 @@ open class Page: View {
         self.frame = frame
     }
     
+    /// Initializes a new page with a view builder.
+    /// - Parameters:
+    ///   - frame: The frame of the page.
+    ///   - content: The view builder content.
+    public init<Content: View>(frame: Rect, @ViewBuilder content: () -> Content) {
+        self.frame = frame
+        let contentView = content()
+        let extractedChildren = ViewExtractionHelper.extractChildren(from: contentView)
+        self.children = extractedChildren
+    }
+    
     // MARK: - View Management
     
-    /// Adds a child view to the page.
-    /// - Parameter view: The view to add.
-    open func addSubview(_ view: View) {
-        children.append(view)
+    /// Adds a view built with ViewBuilder to the page.
+    /// - Parameter content: The view builder content.
+    open func addSubview<Content: View>(@ViewBuilder content: () -> Content) {
+        let contentView = content()
+        let extractedChildren = ViewExtractionHelper.extractChildren(from: contentView)
+        children.append(contentsOf: extractedChildren)
     }
     
     /// Removes all child views from the page.

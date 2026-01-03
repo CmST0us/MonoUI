@@ -136,23 +136,26 @@ class HomePage: Page {
     init() {
         let screenSize = Context.shared.screenSize
         
-        // Create TileMenu
-        self.tileMenu = TileMenu(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
-        
-        super.init(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
+        // Create and configure TileMenu
+        let menu = TileMenu(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height))
         
         // Setup menu items and icons
         let menuItems = ["Sleep", "Editor", "Volt", "Setting"]
         let menuIcons = [Self.iconSleep, Self.iconEditor, Self.iconVolt, Self.iconSetting]
-        tileMenu.setItems(menuItems, icons: menuIcons)
+        menu.setItems(menuItems, icons: menuIcons)
         
-        // Setup selection callback
-        tileMenu.onSelect = { [weak self] index in
-            self?.handleSelection(index: index)
+        // Initialize tileMenu property before super.init
+        self.tileMenu = menu
+        
+        // Initialize with ViewBuilder content (SwiftUI style)
+        super.init(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height)) {
+            menu
         }
         
-        // Add tile menu as subview
-        addSubview(tileMenu)
+        // Setup selection callback after super.init
+        menu.onSelect = { [weak self] index in
+            self?.handleSelection(index: index)
+        }
     }
     
     override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
@@ -186,9 +189,10 @@ class HomePage: Page {
     
     private func handleSelection(index: Int) {
         switch index {
-        case 0: // Sleep
-            // TODO: Implement sleep functionality
-            break
+        case 0: // Sleep -> HelloWorldPage (SwiftUI example)
+            if let app = Application.shared as? SDL2SimulatorApp {
+                (app as Application).router.push(HelloWorldPage())
+            }
         case 1: // Editor
             if let app = Application.shared as? SDL2SimulatorApp {
                 (app as Application).router.push(TextIconTestPage())
@@ -210,30 +214,39 @@ class HomePage: Page {
 // MARK: - TextIconTestPage
 
 /// Test page for Text and Icon views.
-class TextIconTestPage: Page {
+/// Uses SwiftUIPage with SwiftUI-style body property.
+class TextIconTestPage: SwiftUIPage {
     @AnimationValue var offsetX: Double
+    let screenSize = Context.shared.screenSize
     
-    init() {
+    /*
+    should be like this:
+----------------------
+|                    |
+|                    |
+|A                  C|
+|                    |
+|                    |
+----------------------
+    */
+    @ViewBuilder
+    override var body: AnyView {
+        HStack(spacing: 0) {
+            Text("A")
+            Spacer()
+            Text("C")
+        }
+    }
+    
+    override init() {
         let screenSize = Context.shared.screenSize
         self._offsetX = AnimationValue(wrappedValue: screenSize.width)
-        super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
         
-        // Create a vertical stack for text views (SwiftUI style)
-        let textStack = StackView(frame: Rect(x: 0, y: 0, width: screenSize.width, height: screenSize.height),
-                                 axis: .horizontal)
+        // Initialize SwiftUIPage (frame will be set to screen bounds)
+        super.init()
         
-        // Add Text views using SwiftUI-style initialization
-        // Position and size are automatically managed by StackView
-        let text1 = Text("A")
-        textStack.addSubview(text1)
-        
-        textStack.addSubview(Spacer())
-
-        let text2 = Text("C")
-        textStack.addSubview(text2)
-        addSubview(textStack)
-        
-
+        // Override frame to start off-screen for slide-in animation
+        self.frame = Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height)
     }
     
     override func animateIn() {
@@ -251,6 +264,7 @@ class TextIconTestPage: Page {
     }
     
     override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
+        // Update frame position based on animation
         frame.origin.x = offsetX
         super.draw(u8g2: u8g2, origin: origin)
     }
@@ -272,7 +286,7 @@ class TextIconTestPage: Page {
 
 // MARK: - ScrollViewTestPage
 
-/// Test page for ScrollView containing StackView with Text list.
+/// Test page for ScrollView containing ListMenu.
 class ScrollViewTestPage: Page {
     @AnimationValue var offsetX: Double
     let listMenu: ListMenu
@@ -281,11 +295,9 @@ class ScrollViewTestPage: Page {
         let screenSize = Context.shared.screenSize
         self._offsetX = AnimationValue(wrappedValue: screenSize.width)
         
-        // Create a ListMenu
-        self.listMenu = ListMenu(size: Size(width: screenSize.width, height: screenSize.height),
-                                direction: .vertical)
-        
-        super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height))
+        // Create and configure ListMenu
+        let menu = ListMenu(size: Size(width: screenSize.width, height: screenSize.height),
+                           direction: .vertical)
         
         // Set list items (text strings)
         let texts = [
@@ -301,14 +313,18 @@ class ScrollViewTestPage: Page {
             "Item 10: Tenth"
         ]
         
-        // Set items in ListMenu (no StackView needed)
-        listMenu.setItems(texts)
+        // Set items in ListMenu
+        menu.setItems(texts)
         
         // Initialize cursor to first item
-        listMenu.selectedIndex = 0
+        menu.selectedIndex = 0
         
-        // Add ListMenu to page
-        addSubview(listMenu)
+        self.listMenu = menu
+        
+        // Initialize with ViewBuilder content (SwiftUI style)
+        super.init(frame: Rect(x: screenSize.width, y: 0, width: screenSize.width, height: screenSize.height)) {
+            menu
+        }
     }
     
     override func animateIn() {
@@ -341,6 +357,70 @@ class ScrollViewTestPage: Page {
             listMenu.moveDown()
         }
         
+        // 'q' (113) -> Back
+        if key == 113 {
+            if let app = Application.shared as? SDL2SimulatorApp {
+                let router = (app as Application).router
+                if router.modal != nil {
+                    router.dismissModal()
+                } else {
+                    router.pop()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - HelloWorldPage
+
+/// Example SwiftUI-style page that displays "Hello World" with a counter.
+///
+/// This demonstrates the SwiftUI-style `body` property usage with @State.
+/// The content will be automatically centered on the screen.
+/// The counter increments every second.
+class HelloWorldPage: SwiftUIPage {
+    @State var count: Int = 0
+    private var lastUpdateTime: Double = 0
+    
+    @ViewBuilder
+    override var body: AnyView {
+        VStack(spacing: 5) {
+            Text("Hello World")
+            Text("Count: \(count)")
+        }
+    }
+    
+    override init() {
+        super.init()
+        
+        // Setup @State update handler to refresh body when count changes
+        _count.setUpdateHandler { [weak self] in
+            self?.updateBody()
+        }
+        
+        // Initialize last update time
+        if let app = Application.shared {
+            lastUpdateTime = app.getCurrentTime()
+        }
+    }
+    
+    /// Called every frame to update the counter.
+    /// This is called by the Router when drawing the page.
+    override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
+        // Update counter every second
+        if let app = Application.shared {
+            let currentTime = app.getCurrentTime()
+            if currentTime - lastUpdateTime >= 1.0 {
+                count += 1
+                lastUpdateTime = currentTime
+            }
+        }
+        
+        // Call super to draw the page
+        super.draw(u8g2: u8g2, origin: origin)
+    }
+    
+    override func handleInput(key: Int32) {
         // 'q' (113) -> Back
         if key == 113 {
             if let app = Application.shared as? SDL2SimulatorApp {

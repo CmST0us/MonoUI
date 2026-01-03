@@ -8,7 +8,6 @@ import CU8g2
 /// Application for STLink V3 bridge with SSD1306 display.
 class STLinkV3BridgeSSD1306App: Application {
     private let bridge: SwiftSTLinkV3Bridge.Bridge
-    let router = Router()
     
     // GPIO state tracking for edge detection
     private var lastGPIOStates: [Any]?

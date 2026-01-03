@@ -5,7 +5,7 @@ import CU8g2
 /// A scrollable menu list with cursor navigation and highlighting.
 ///
 /// `ListMenu` manages a list of text items with cursor-based navigation:
-/// - Text items are directly laid out within the menu (no StackView)
+/// - Text items are directly laid out within the menu (no HStack/VStack needed)
 /// - Cursor position and size are animated
 /// - Text positions remain fixed when cursor moves
 /// - Cursor and text overlap areas are displayed with inverse colors
