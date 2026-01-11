@@ -23,6 +23,7 @@ let package = Package(
         .package(url: "https://github.com/CmST0us/SwiftSDL2.git", branch: "main"),
         .package(url: "https://github.com/CmST0us/SwiftSTLinkV3Bridge.git", branch: "main"),
         .package(url: "https://github.com/CmST0us/U8g2Kit.git", branch: "main"),
+        .package(url: "https://github.com/CmST0us/PeripheryKit.git", branch: "main"),
     ],
     targets: [
         .target(
@@ -51,6 +52,7 @@ let package = Package(
                 "MonoUI",
                 .product(name: "CU8g2", package: "U8g2Kit"),
                 .product(name: "U8g2Kit", package: "U8g2Kit"),
+                .product(name: "PeripheryKit_static", package: "PeripheryKit"),
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5)

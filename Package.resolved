@@ -1,6 +1,15 @@
 {
-  "originHash" : "11d790d965032e1a884e7741d93afb2327243f76e8343986daeee4c9d9c99df6",
+  "originHash" : "db29bca93a7e3cb4d462032abbcb0c0ec696775b41ae34b7f155ced39785a260",
   "pins" : [
+    {
+      "identity" : "peripherykit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CmST0us/PeripheryKit.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "a02676dd096523ec792fab3574ae490b421f0364"
+      }
+    },
     {
       "identity" : "swiftsdl2",
       "kind" : "remoteSourceControl",

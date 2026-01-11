@@ -1,20 +1,8 @@
+import Foundation
 import MonoUI
 import CU8g2
 import U8g2Kit
-#if canImport(Glibc)
-import Glibc
-#elseif canImport(Darwin)
-import Darwin
-#endif
-
-// Linux I2C ioctl constant
-#if canImport(Glibc)
-private let I2C_SLAVE: UInt = 0x0703
-
-// Direct ioctl call using @_silgen_name
-@_silgen_name("ioctl")
-private func ioctl(_ fd: Int32, _ request: UInt, _ argp: UnsafeMutableRawPointer?) -> Int32
-#endif
+import PeripheryKit
 
 /// I2C address wrapper for 7-bit addresses
 public struct I2CAddress {
@@ -28,7 +16,7 @@ public struct I2CAddress {
 class LinuxI2CDeviceDriver: U8g2Kit.Driver {
     private let i2cBus: Int32
     private let address: I2CAddress
-    private var i2cFileDescriptor: Int32 = -1
+    private let i2c: I2C
     
     private var transferData: [UInt8] = []
     private var isTransferring = false
@@ -40,6 +28,11 @@ class LinuxI2CDeviceDriver: U8g2Kit.Driver {
     init(i2cBus: Int32, address: I2CAddress) {
         self.i2cBus = i2cBus
         self.address = address
+        
+        // Initialize PeripheryKit I2C
+        let i2cPath = "/dev/i2c-\(i2cBus)"
+        self.i2c = I2C(chip: .i2c(i2cPath))
+        
         super.init(u8g2_Setup_ssd1306_i2c_128x64_noname_f, &U8g2Kit.u8g2_cb_r0)
         
         // Open I2C device
@@ -51,64 +44,36 @@ class LinuxI2CDeviceDriver: U8g2Kit.Driver {
     }
     
     private func openI2CDevice() {
-        #if canImport(Glibc)
-        let filename = "/dev/i2c-\(i2cBus)"
-        filename.withCString { cString in
-            i2cFileDescriptor = open(cString, O_RDWR)
-        }
-        
-        guard i2cFileDescriptor >= 0 else {
+        guard i2c.open() else {
             print("Failed to open I2C device /dev/i2c-\(i2cBus)")
             return
         }
-        
-        guard let addr = address.address7Bit else {
-            print("Invalid I2C address")
-            return
-        }
-        
-        // Set I2C slave address using system call
-        // ioctl(fd, I2C_SLAVE, addr) - we need to use a C wrapper or direct syscall
-        // For now, we'll use a helper function
-        let result = setI2CSlaveAddress(i2cFileDescriptor, UInt(addr))
-        guard result >= 0 else {
-            print("Failed to set I2C slave address")
-            close(i2cFileDescriptor)
-            i2cFileDescriptor = -1
-            return
-        }
-        #endif
     }
-    
-    #if canImport(Glibc)
-    // Helper function to call ioctl for I2C_SLAVE
-    private func setI2CSlaveAddress(_ fd: Int32, _ addr: UInt) -> Int32 {
-        var addrValue = addr
-        return withUnsafePointer(to: &addrValue) { ptr in
-            return ioctl(fd, I2C_SLAVE, UnsafeMutableRawPointer(mutating: ptr))
-        }
-    }
-    #endif
     
     private func closeI2CDevice() {
-        if i2cFileDescriptor >= 0 {
-            close(i2cFileDescriptor)
-            i2cFileDescriptor = -1
-        }
+        _ = i2c.close()
     }
     
     private func writeI2C(data: [UInt8]) -> Bool {
-        guard i2cFileDescriptor >= 0 else { return false }
         guard !data.isEmpty else { return true }
-        
-        #if canImport(Glibc)
-        let result = data.withUnsafeBytes { bytes in
-            write(i2cFileDescriptor, bytes.baseAddress, data.count)
+        guard let addr = address.address7Bit else {
+            print("Invalid I2C address")
+            return false
         }
-        return result == data.count
-        #else
-        return false
-        #endif
+        
+        // Convert 7-bit address to UInt16 for PeripheryKit
+        let i2cAddress = UInt16(addr)
+        
+        // Create I2C request with data
+        let request = I2C.Request(
+            address: i2cAddress,
+            flags: .NONE,
+            data: Data(data)
+        )
+        
+        // Transfer data
+        let responses = i2c.tranfer(requests: [request])
+        return !responses.isEmpty
     }
     
     override func onByte(msg: UInt8, arg_int: UInt8, arg_ptr: UnsafeMutableRawPointer?) -> UInt8 {
