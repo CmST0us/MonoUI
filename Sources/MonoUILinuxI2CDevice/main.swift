@@ -144,12 +144,24 @@ class LinuxI2CApp: Application {
 
 // MARK: - Main Entry Point
 
-// Default I2C bus and address - adjust as needed
-// Common SSD1306 I2C addresses: 0x3C (7-bit) or 0x3D (7-bit)
-let i2cBus: Int32 = 8  // /dev/i2c-1 (adjust based on your system)
-let i2cAddress = I2CAddress(address7Bit: 0x3C)  // Common SSD1306 address
+// Try to automatically scan for SSD1306 device
+var driver: LinuxI2CDeviceDriver?
 
-let driver = LinuxI2CDeviceDriver(i2cBus: i2cBus, address: i2cAddress)
+if let scannedDriver = LinuxI2CDeviceDriver.createByScanning() {
+    driver = scannedDriver
+} else {
+    // Fallback to manual configuration if scan fails
+    print("Auto-scan failed, using manual configuration")
+    let i2cBus: Int32 = 8  // /dev/i2c-8 (adjust based on your system)
+    let i2cAddress = I2CAddress(address7Bit: 0x3C)  // Common SSD1306 address
+    driver = LinuxI2CDeviceDriver(i2cBus: i2cBus, address: i2cAddress)
+}
+
+guard let driver = driver else {
+    print("Failed to create I2C device driver")
+    exit(1)
+}
+
 let screenSize = Size(width: 128, height: 64)
 let context = Context(driver: driver, screenSize: screenSize)
 let app = LinuxI2CApp(context: context)
