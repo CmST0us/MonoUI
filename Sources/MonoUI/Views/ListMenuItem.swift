@@ -404,15 +404,33 @@ public class ValueMenuItem: ListMenuItem {
         }
     }
     
+    /// The minimum value (default: 0).
+    public var minimum: Int = 0
+    
+    /// The maximum value (default: 100).
+    public var maximum: Int = 100
+    
+    /// The step size for value changes (default: 1).
+    public var step: Int = 1
+    
     /// Callback invoked when the value changes.
     public var onValueChanged: ((Int) -> Void)?
     
     /// Left margin for the value display (default: 95.0).
     public var valueLeftMargin: Double = 95.0
     
-    public init(_ text: String, value: Int, onValueChanged: ((Int) -> Void)? = nil) {
+    public init(_ text: String, 
+                value: Int, 
+                minimum: Int = 0,
+                maximum: Int = 100,
+                step: Int = 1,
+                onValueChanged: ((Int) -> Void)? = nil) {
         self.text = text
-        self.value = value
+        self.minimum = minimum
+        self.maximum = maximum
+        self.step = step
+        // Clamp initial value to valid range
+        self.value = max(minimum, min(maximum, value))
         self.onValueChanged = onValueChanged
     }
     
@@ -433,7 +451,31 @@ public class ValueMenuItem: ListMenuItem {
     }
     
     public func handleSelection() -> Bool {
-        return false
+        // Get router from Application
+        guard let app = Application.shared else { return false }
+        let router = app.router
+        
+        // Create ProgressView with current value and settings
+        let progressView = ProgressView(
+            title: text,
+            value: Double(value),
+            minimum: Double(minimum),
+            maximum: Double(maximum),
+            step: Double(step)
+        )
+        
+        // Update ValueMenuItem value when ProgressView value changes
+        progressView.onValueChanged = { [weak self] newValue in
+            guard let self = self else { return }
+            // Clamp value to valid range
+            let clampedValue = max(self.minimum, min(self.maximum, Int(newValue)))
+            self.value = clampedValue
+        }
+        
+        // Present the ProgressView modal
+        router.present(progressView)
+        
+        return true
     }
 }
 

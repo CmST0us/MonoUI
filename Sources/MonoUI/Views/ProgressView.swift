@@ -151,6 +151,18 @@ public class ProgressView: ModalView {
                     u8g2_uint_t(max(0, min(valueTextX, Double(UInt16.max)))),
                     u8g2_uint_t(max(0, min(titleY, Double(UInt16.max)))),
                     valueText)
+        
+        // Draw visible border (opposite color of background)
+        // Normal mode: black background (0) -> white border (1)
+        // Inverse mode: white background (1) -> black border (0)
+        let borderColor: UInt8 = colorMode == .normal ? 1 : 0
+        u8g2_SetDrawColor(u8g2, borderColor)
+        u8g2_DrawRFrame(u8g2,
+                       u8g2_uint_t(absX),
+                       u8g2_uint_t(absY),
+                       u8g2_uint_t(frame.size.width),
+                       u8g2_uint_t(frame.size.height),
+                       u8g2_uint_t(cornerRadius))
     }
 }
 
