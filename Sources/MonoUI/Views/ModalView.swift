@@ -1,6 +1,6 @@
 import CU8g2
 
-// MARK: - ModalView
+// MARK: - ModalColorMode
 
 /// Color mode for modal view display.
 public enum ModalColorMode: UInt8 {
@@ -9,6 +9,8 @@ public enum ModalColorMode: UInt8 {
     /// Inverse color mode (white background, black border).
     case inverse = 1
 }
+
+// MARK: - ModalView
 
 /// Base class for modal views that appear with slide animations.
 ///
@@ -60,20 +62,23 @@ open class ModalView: View {
         let screenHeight = Context.shared.screenSize.height
         self._offsetY = AnimationValue(wrappedValue: screenHeight)
 
-        super.init(frame: frame)
-
         // Set animation speed (use the default value from animationSpeed property)
-        _offsetY.speed = 25.0
+        _offsetY.speed = Self.DefaultAnimationSpeed
+
+        super.init(frame: frame)
 
         // Trigger slide-up animation
         self.offsetY = frame.origin.y
     }
 
-    // MARK: - Public Methods
+    // MARK: - Dismissal Support
+
+    /// Indicates that this modal can be dismissed.
+    open override var canDismiss: Bool { true }
 
     /// Dismisses the modal with a slide-down animation.
     /// - Parameter completion: Closure to execute when animation completes.
-    public func dismiss(completion: @escaping () -> Void) {
+    open override func dismiss(completion: @escaping () -> Void) {
         isDismissing = true
         onAnimationCompleted = completion
         let screenHeight = Context.shared.screenSize.height
@@ -86,7 +91,7 @@ open class ModalView: View {
     /// - Parameters:
     ///   - u8g2: Pointer to the u8g2 graphics context.
     ///   - origin: The absolute origin of the parent.
-    public override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
+    open override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
         guard let u8g2 = u8g2 else { return }
 
         // Check if dismiss animation is complete

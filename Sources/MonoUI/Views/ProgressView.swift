@@ -14,12 +14,12 @@ public class ProgressView: ModalView {
     private static let DefaultProgressBarWidth: Double = 92
     private static let DefaultProgressBarHeight: Double = 7
     private static let DefaultPadding: Double = 5
-    
+
     // MARK: - Public Properties
-    
+
     /// The title text to display.
     public var title: String
-    
+
     /// The current progress value.
     public var value: Double {
         didSet {
@@ -33,26 +33,26 @@ public class ProgressView: ModalView {
             progressBar.value = value
         }
     }
-    
+
     /// The minimum value (default: 0).
     public var minimum: Double = 0
-    
+
     /// The maximum value (default: 100).
     public var maximum: Double = 100
-    
+
     /// The step size for value changes (default: 1).
     public var step: Double = 1
-    
+
     /// Callback executed when the value changes.
     public var onValueChanged: ((Double) -> Void)?
-    
+
     // MARK: - Private Properties
-    
+
     /// The progress bar component.
     private var progressBar: ProgressBar!
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a new progress view.
     /// - Parameters:
     ///   - frame: The frame of the window. If nil, uses default centered frame.
@@ -61,7 +61,7 @@ public class ProgressView: ModalView {
     ///   - minimum: The minimum value (default: 0).
     ///   - maximum: The maximum value (default: 100).
     ///   - step: The step size for value changes (default: 1).
-    public init(frame: Rect? = nil, 
+    public init(frame: Rect? = nil,
                 title: String,
                 value: Double = 0,
                 minimum: Double = 0,
@@ -71,13 +71,13 @@ public class ProgressView: ModalView {
         self.minimum = minimum
         self.maximum = maximum
         self.step = step
-        
+
         // Initialize value (clamped to valid range)
         let clampedValue = max(minimum, min(maximum, value))
         self.value = clampedValue
-        
+
         let screenSize = Context.shared.screenSize
-        
+
         // Use provided frame or create default centered frame
         let modalFrame: Rect
         if let frame = frame {
@@ -89,46 +89,45 @@ public class ProgressView: ModalView {
             let y = (screenSize.height - windowHeight) / 2
             modalFrame = Rect(x: x, y: y, width: windowWidth, height: windowHeight)
         }
-        
+
         super.init(frame: modalFrame)
-        
+
         // Create progress bar component (after super.init)
         let progressBarX = Self.DefaultPadding
         let progressBarY: Double = 20
-        let progressBarFrame = Rect(x: progressBarX, y: progressBarY, 
-                                    width: Self.DefaultProgressBarWidth, 
+        let progressBarFrame = Rect(x: progressBarX, y: progressBarY,
+                                    width: Self.DefaultProgressBarWidth,
                                     height: Self.DefaultProgressBarHeight)
         self.progressBar = ProgressBar(frame: progressBarFrame,
                                        value: clampedValue,
                                        minimum: minimum,
                                        maximum: maximum)
     }
-    
-    // MARK: - Public Methods
-    
+
+    // MARK: - Input Handling
+
+    /// Indicates that this view can handle input.
+    public override var canHandleInput: Bool { true }
+
     /// Handles keyboard input for the progress view.
     /// - Parameter key: The key code of the pressed key.
-    public func handleInput(key: Int32) {
+    public override func handleInput(key: Int32) {
         // 'a' (97) -> Decrease value
         if key == 97 {
             value -= step
             onValueChanged?(value)
         }
-        
+
         // 'd' (100) -> Increase value
         if key == 100 {
             value += step
             onValueChanged?(value)
         }
     }
-    
+
     // MARK: - Drawing
-    
+
     /// Draws the progress view content (title, progress bar, and value text).
-    /// - Parameters:
-    ///   - u8g2: Pointer to the u8g2 graphics context.
-    ///   - absX: The absolute X coordinate of the modal.
-    ///   - absY: The absolute Y coordinate of the modal.
     public override func drawContent(u8g2: UnsafeMutablePointer<u8g2_t>, absX: Double, absY: Double) {
         // Draw title text
         u8g2_SetFont(u8g2, u8g2_font_6x10_tf)
@@ -139,10 +138,10 @@ public class ProgressView: ModalView {
                     u8g2_uint_t(max(0, min(titleX, Double(UInt16.max)))),
                     u8g2_uint_t(max(0, min(titleY, Double(UInt16.max)))),
                     title)
-        
+
         // Draw progress bar component
         progressBar.draw(u8g2: u8g2, origin: Point(x: absX, y: absY))
-        
+
         // Draw current value text
         let valueText = "\(Int(value))"
         let valueTextWidth = Double(u8g2_GetStrWidth(u8g2, valueText))
@@ -153,4 +152,3 @@ public class ProgressView: ModalView {
                     valueText)
     }
 }
-

@@ -87,5 +87,5 @@ open class Page: View {
     /// Handles input events for the page.
     /// Override this to respond to user input.
     /// - Parameter key: The key code of the pressed key.
-    open func handleInput(key: Int32) {}
+    open override func handleInput(key: Int32) {}
 }

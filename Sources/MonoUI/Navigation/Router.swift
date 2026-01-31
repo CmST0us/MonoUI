@@ -85,15 +85,17 @@ public class Router {
     
     /// Dismisses the currently displayed modal.
     ///
-    /// If the modal is a `ModalView`, it will play its dismiss animation
+    /// If the modal supports dismissal, it will play its dismiss animation
     /// before being removed.
     public func dismissModal() {
-        if let modalView = modal as? ModalView {
-            modalView.dismiss {
+        guard let modal = modal else { return }
+
+        if modal.canDismiss {
+            modal.dismiss {
                 self.modal = nil
             }
         } else {
-            modal = nil
+            self.modal = nil
         }
     }
     
@@ -148,17 +150,17 @@ public class Router {
                 dismissModal()
                 return
             }
-            
-            // Let modal handle other input
-            if let progressView = modal as? ProgressView {
-                progressView.handleInput(key: key)
+
+            // Let modal handle input if it supports it
+            if modal.canHandleInput {
+                modal.handleInput(key: key)
                 return
             }
-            
-            // For other modals, return early (they handle their own input)
+
+            // For modals without input handling, return early
             return
         }
-        
+
         // Otherwise, dispatch to the top page
         if let page = stack.last {
             page.handleInput(key: key)
