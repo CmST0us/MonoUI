@@ -42,40 +42,37 @@ public enum StackAlignment {
 /// ```
 open class StackView: View {
     // MARK: - Public Properties
-    
-    /// The frame of the stack view.
-    public var frame: Rect
-    
+
     /// The axis along which views are arranged.
     public var axis: StackAxis {
         didSet {
             layoutChildren()
         }
     }
-    
+
     /// The spacing between child views.
     public var spacing: Double {
         didSet {
             layoutChildren()
         }
     }
-    
+
     /// The alignment of child views within the stack.
     public var alignment: StackAlignment {
         didSet {
             layoutChildren()
         }
     }
-    
+
     /// The child views contained within the stack.
     public var children: [View] = [] {
         didSet {
             layoutChildren()
         }
     }
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a new stack view.
     /// - Parameters:
     ///   - frame: The frame of the stack view.
@@ -83,58 +80,58 @@ open class StackView: View {
     ///   - spacing: The spacing between child views (default: 0).
     ///   - alignment: The alignment of child views (default: .leading).
     public init(frame: Rect, axis: StackAxis = .horizontal, spacing: Double = 0, alignment: StackAlignment = .center) {
-        self.frame = frame
         self.axis = axis
         self.spacing = spacing
         self.alignment = alignment
+        super.init(frame: frame)
     }
-    
+
     // MARK: - View Management
-    
+
     /// Adds a child view to the stack.
     /// - Parameter view: The view to add.
     public func addSubview(_ view: View) {
         children.append(view)
         layoutChildren()
     }
-    
+
     /// Removes a child view from the stack.
     /// - Parameter view: The view to remove.
     public func removeSubview(_ view: View) {
-        children.removeAll { $0 === view }
+        children.removeAll { ($0 as AnyObject) === (view as AnyObject) }
         layoutChildren()
     }
-    
+
     /// Removes all child views from the stack.
     public func removeAllSubviews() {
         children.removeAll()
     }
-    
+
     // MARK: - Drawing
-    
+
     /// Renders the stack view and its children.
     /// - Parameters:
     ///   - u8g2: Pointer to the u8g2 graphics context.
     ///   - origin: The absolute origin of the parent.
-    open func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
+    open override func draw(u8g2: UnsafeMutablePointer<u8g2_t>?, origin: Point) {
         guard let u8g2 = u8g2 else { return }
-        
+
         let absX = origin.x + frame.origin.x
         let absY = origin.y + frame.origin.y
-        
+
         // Draw all child views
         let childOrigin = Point(x: absX, y: absY)
         for child in children {
             child.draw(u8g2: u8g2, origin: childOrigin)
         }
     }
-    
+
     // MARK: - Layout
-    
+
     /// Lays out all child views according to the stack's axis, spacing, and alignment.
     private func layoutChildren() {
         guard !children.isEmpty else { return }
-        
+
         switch axis {
         case .horizontal:
             layoutHorizontally()
@@ -142,31 +139,31 @@ open class StackView: View {
             layoutVertically()
         }
     }
-    
+
     /// Lays out children horizontally (like HStack).
     private func layoutHorizontally() {
         // Separate spacers from regular views
         let spacers = children.compactMap { $0 as? Spacer }
         let regularViews = children.filter { !($0 is Spacer) }
-        
+
         // Calculate total width needed for regular views
         let totalSpacing = spacing * Double(max(0, children.count - 1))
         let totalRegularWidth = regularViews.reduce(0.0) { $0 + $1.frame.size.width }
-        
+
         // Calculate available space for spacers
         let availableWidth = frame.size.width - totalRegularWidth - totalSpacing
         let spacerWidth = spacers.isEmpty ? 0 : max(0, availableWidth) / Double(spacers.count)
-        
+
         // Assign widths to spacers
         for spacer in spacers {
             let finalWidth = max(spacer.minLength, spacerWidth)
             spacer.frame = Rect(x: spacer.frame.origin.x, y: spacer.frame.origin.y,
                                width: finalWidth, height: spacer.frame.size.height)
         }
-        
+
         // Calculate total width with spacers
         let totalWidth = totalRegularWidth + (spacerWidth * Double(spacers.count)) + totalSpacing
-        
+
         // Calculate starting position based on alignment
         var currentX: Double = 0
         switch alignment {
@@ -183,13 +180,13 @@ open class StackView: View {
             var x: Double = 0
             for child in children {
                 let y = calculateVerticalAlignment(child: child)
-                child.frame = Rect(x: x, y: y, 
+                child.frame = Rect(x: x, y: y,
                                  width: childWidth, height: child.frame.size.height)
                 x += childWidth + spacing
             }
             return
         }
-        
+
         // Position children horizontally
         var x = currentX
         for child in children {
@@ -201,38 +198,38 @@ open class StackView: View {
             case .fill:
                 y = 0
             }
-            
-            child.frame = Rect(x: x, y: y, 
-                             width: child.frame.size.width, 
+
+            child.frame = Rect(x: x, y: y,
+                             width: child.frame.size.width,
                              height: child.frame.size.height)
             x += child.frame.size.width + spacing
         }
     }
-    
+
     /// Lays out children vertically (like VStack).
     private func layoutVertically() {
         // Separate spacers from regular views
         let spacers = children.compactMap { $0 as? Spacer }
         let regularViews = children.filter { !($0 is Spacer) }
-        
+
         // Calculate total height needed for regular views
         let totalSpacing = spacing * Double(max(0, children.count - 1))
         let totalRegularHeight = regularViews.reduce(0.0) { $0 + $1.frame.size.height }
-        
+
         // Calculate available space for spacers
         let availableHeight = frame.size.height - totalRegularHeight - totalSpacing
         let spacerHeight = spacers.isEmpty ? 0 : max(0, availableHeight) / Double(spacers.count)
-        
+
         // Assign heights to spacers
         for spacer in spacers {
             let finalHeight = max(spacer.minLength, spacerHeight)
             spacer.frame = Rect(x: spacer.frame.origin.x, y: spacer.frame.origin.y,
                                width: spacer.frame.size.width, height: finalHeight)
         }
-        
+
         // Calculate total height with spacers
         let totalHeight = totalRegularHeight + (spacerHeight * Double(spacers.count)) + totalSpacing
-        
+
         // Calculate starting position based on alignment
         var currentY: Double = 0
         switch alignment {
@@ -249,13 +246,13 @@ open class StackView: View {
             var y: Double = 0
             for child in children {
                 let x = calculateHorizontalAlignment(child: child)
-                child.frame = Rect(x: x, y: y, 
+                child.frame = Rect(x: x, y: y,
                                  width: child.frame.size.width, height: childHeight)
                 y += childHeight + spacing
             }
             return
         }
-        
+
         // Position children vertically
         var y = currentY
         for child in children {
@@ -267,14 +264,14 @@ open class StackView: View {
             case .fill:
                 x = 0
             }
-            
-            child.frame = Rect(x: x, y: y, 
-                             width: child.frame.size.width, 
+
+            child.frame = Rect(x: x, y: y,
+                             width: child.frame.size.width,
                              height: child.frame.size.height)
             y += child.frame.size.height + spacing
         }
     }
-    
+
     /// Calculates the horizontal alignment position for a child view.
     private func calculateHorizontalAlignment(child: View) -> Double {
         switch alignment {
@@ -288,7 +285,7 @@ open class StackView: View {
             return 0
         }
     }
-    
+
     /// Calculates the vertical alignment position for a child view.
     private func calculateVerticalAlignment(child: View) -> Double {
         switch alignment {
@@ -303,4 +300,3 @@ open class StackView: View {
         }
     }
 }
-
