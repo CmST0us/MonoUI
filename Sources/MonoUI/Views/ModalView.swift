@@ -113,8 +113,9 @@ open class ModalView: View {
                      u8g2_uint_t(frame.size.height),
                      u8g2_uint_t(cornerRadius))
 
-        // Draw window border
-        u8g2_SetDrawColor(u8g2, colorMode.rawValue)
+        // Draw window border (use opposite color for visibility)
+        let borderColor: UInt8 = colorMode == .normal ? 1 : 0
+        u8g2_SetDrawColor(u8g2, borderColor)
         u8g2_DrawRFrame(u8g2,
                        u8g2_uint_t(absX),
                        u8g2_uint_t(absY),
